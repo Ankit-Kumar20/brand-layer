@@ -187,4 +187,55 @@ L1 Ingest ──queued──► L9 Worker
 Client ◄── L8 Search / Profile
 ```
 
+---
+
+## How to run (local)
+
+Prerequisites: Postgres with **pgvector**, Node/Bun, OpenAI API key.
+
+```bash
+# 1. Env
+cp .env.example .env
+# set DATABASE_URL, BETTER_AUTH_SECRET, OPENAI_API_KEY
+
+# 2. Migrate (enables vector + memory tables)
+bun run db:migrate
+# or: bun run db:push  (after CREATE EXTENSION vector;)
+
+# 3. App + worker
+bun run dev
+bun run worker   # separate terminal — polls jobs table
+
+# 4. Mint a dev API key
+curl -s -X POST http://localhost:3000/api/dev/api-keys | jq
+
+# 5. Ingest
+curl -s -X POST http://localhost:3000/v3/documents \
+  -H "Authorization: Bearer sm_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "My name is Alex. I prefer dark mode and work at Stripe as a PM.",
+    "containerTag": "user_alex",
+    "customId": "onboarding_1",
+    "dreaming": "instant"
+  }' | jq
+
+# 6. Poll status until done
+curl -s http://localhost:3000/v3/documents/<id> \
+  -H "Authorization: Bearer sm_..." | jq
+
+# 7. Search + profile
+curl -s -X POST http://localhost:3000/v3/search \
+  -H "Authorization: Bearer sm_..." \
+  -H "Content-Type: application/json" \
+  -d '{"q":"where does Alex work?","containerTag":"user_alex","searchMode":"hybrid"}' | jq
+
+curl -s -X POST http://localhost:3000/v3/profile \
+  -H "Authorization: Bearer sm_..." \
+  -H "Content-Type: application/json" \
+  -d '{"containerTag":"user_alex"}' | jq
+```
+
+Implemented modules: `lib/memory/*`, routes under `app/api/v3/*`, worker `workers/ingest.ts`.
+
 See also: [architecture.md](./architecture.md) for conceptual core design.

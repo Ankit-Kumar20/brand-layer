@@ -1,5 +1,22 @@
-import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import {
+  pgTable,
+  text,
+  timestamp,
+  boolean,
+  index,
+  integer,
+  jsonb,
+  uniqueIndex,
+  customType,
+  vector,
+} from "drizzle-orm/pg-core";
+
+const tsvector = customType<{ data: string }>({
+  dataType() {
+    return "tsvector";
+  },
+});
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -73,9 +90,213 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull().default("default"),
+    keyHash: text("key_hash").notNull(),
+    keyPrefix: text("key_prefix").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("api_keys_userId_idx").on(table.userId),
+    uniqueIndex("api_keys_keyHash_uidx").on(table.keyHash),
+  ],
+);
+
+export const documents = pgTable(
+  "documents",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    containerTag: text("container_tag").notNull(),
+    customId: text("custom_id"),
+    contentHash: text("content_hash"),
+    content: text("content"),
+    rawText: text("raw_text"),
+    url: text("url"),
+    type: text("type").notNull().default("text"),
+    status: text("status").notNull().default("queued"),
+    taskType: text("task_type").notNull().default("memory"),
+    dreaming: text("dreaming").notNull().default("dynamic"),
+    metadata: jsonb("metadata").$type<Record<string, string | number | boolean>>(),
+    processingMetadata: jsonb("processing_metadata").$type<Record<string, unknown>>(),
+    error: text("error"),
+    chunkCount: integer("chunk_count").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("documents_user_container_idx").on(table.userId, table.containerTag),
+    uniqueIndex("documents_custom_id_uidx")
+      .on(table.userId, table.containerTag, table.customId)
+      .where(sql`${table.customId} is not null`),
+  ],
+);
+
+export const chunks = pgTable(
+  "chunks",
+  {
+    id: text("id").primaryKey(),
+    documentId: text("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    content: text("content").notNull(),
+    tokenCount: integer("token_count").notNull().default(0),
+    embedding: vector("embedding", { dimensions: 1536 }),
+    embeddingModel: text("embedding_model"),
+    fts: tsvector("fts"),
+    metadata: jsonb("metadata").$type<Record<string, string | number | boolean>>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("chunks_documentId_idx").on(table.documentId),
+    index("chunks_embedding_hnsw_idx")
+      .using("hnsw", table.embedding.op("vector_cosine_ops")),
+  ],
+);
+
+export const memories = pgTable(
+  "memories",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    containerTag: text("container_tag").notNull(),
+    memory: text("memory").notNull(),
+    isStatic: boolean("is_static").notNull().default(false),
+    isLatest: boolean("is_latest").notNull().default(true),
+    isForgotten: boolean("is_forgotten").notNull().default(false),
+    isInference: boolean("is_inference").notNull().default(false),
+    version: integer("version").notNull().default(1),
+    parentMemoryId: text("parent_memory_id"),
+    rootMemoryId: text("root_memory_id"),
+    embedding: vector("embedding", { dimensions: 1536 }),
+    embeddingModel: text("embedding_model"),
+    fts: tsvector("fts"),
+    metadata: jsonb("metadata").$type<Record<string, string | number | boolean>>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("memories_user_container_idx").on(table.userId, table.containerTag),
+    index("memories_latest_idx").on(
+      table.userId,
+      table.containerTag,
+      table.isLatest,
+      table.isForgotten,
+    ),
+    index("memories_embedding_hnsw_idx")
+      .using("hnsw", table.embedding.op("vector_cosine_ops")),
+  ],
+);
+
+export const memoryEdges = pgTable(
+  "memory_edges",
+  {
+    id: text("id").primaryKey(),
+    fromId: text("from_id")
+      .notNull()
+      .references(() => memories.id, { onDelete: "cascade" }),
+    toId: text("to_id")
+      .notNull()
+      .references(() => memories.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("memory_edges_from_idx").on(table.fromId),
+    index("memory_edges_to_idx").on(table.toId),
+    uniqueIndex("memory_edges_unique_uidx").on(table.fromId, table.toId, table.type),
+  ],
+);
+
+export const memoryDocumentSources = pgTable(
+  "memory_document_sources",
+  {
+    id: text("id").primaryKey(),
+    memoryId: text("memory_id")
+      .notNull()
+      .references(() => memories.id, { onDelete: "cascade" }),
+    documentId: text("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("memory_document_sources_memory_idx").on(table.memoryId),
+    index("memory_document_sources_document_idx").on(table.documentId),
+    uniqueIndex("memory_document_sources_uidx").on(table.memoryId, table.documentId),
+  ],
+);
+
+export const profiles = pgTable(
+  "profiles",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    containerTag: text("container_tag").notNull(),
+    staticFacts: jsonb("static_facts").$type<string[]>().notNull().default([]),
+    dynamicFacts: jsonb("dynamic_facts").$type<string[]>().notNull().default([]),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("profiles_user_container_uidx").on(table.userId, table.containerTag),
+  ],
+);
+
+export const jobs = pgTable(
+  "jobs",
+  {
+    id: text("id").primaryKey(),
+    type: text("type").notNull(),
+    documentId: text("document_id").references(() => documents.id, {
+      onDelete: "cascade",
+    }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    containerTag: text("container_tag"),
+    payload: jsonb("payload").$type<Record<string, unknown>>(),
+    status: text("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    error: text("error"),
+    runAfter: timestamp("run_after").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("jobs_status_run_after_idx").on(table.status, table.runAfter),
+    index("jobs_documentId_idx").on(table.documentId),
+  ],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  apiKeys: many(apiKeys),
+  documents: many(documents),
+  memories: many(memories),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -90,4 +311,34 @@ export const accountRelations = relations(account, ({ one }) => ({
     fields: [account.userId],
     references: [user.id],
   }),
+}));
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  user: one(user, {
+    fields: [apiKeys.userId],
+    references: [user.id],
+  }),
+}));
+
+export const documentsRelations = relations(documents, ({ one, many }) => ({
+  user: one(user, {
+    fields: [documents.userId],
+    references: [user.id],
+  }),
+  chunks: many(chunks),
+}));
+
+export const chunksRelations = relations(chunks, ({ one }) => ({
+  document: one(documents, {
+    fields: [chunks.documentId],
+    references: [documents.id],
+  }),
+}));
+
+export const memoriesRelations = relations(memories, ({ one, many }) => ({
+  user: one(user, {
+    fields: [memories.userId],
+    references: [user.id],
+  }),
+  sources: many(memoryDocumentSources),
 }));
