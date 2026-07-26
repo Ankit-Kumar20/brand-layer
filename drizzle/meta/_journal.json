@@ -15,6 +15,13 @@
       "when": 1785002580525,
       "tag": "0001_great_captain_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785061912740,
+      "tag": "0002_daffy_shinobi_shaw",
+      "breakpoints": true
     }
   ]
 }
