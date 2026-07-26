@@ -1,26 +1,536 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
+  --font-sans: var(--font-geist-sans), "Geist", sans-serif;
+  --font-mono: var(--font-geist-mono), "Geist Mono", monospace;
+  --font-display: var(--font-geist-sans), "Geist", sans-serif;
+
   --color-background: var(--background);
+  --color-background-50: var(--background-50);
+  --color-background-100: var(--background-100);
+  --color-background-200: var(--background-200);
+  --color-background-300: var(--background-300);
+  --color-background-400: var(--background-400);
+  --color-background-500: var(--background-500);
+  --color-background-600: var(--background-600);
+  --color-background-700: var(--background-700);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius: var(--radius);
+
+  --color-chrome: var(--chrome);
+  --color-sheet: var(--sheet);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-status-ok: var(--status-ok);
+  --color-status-warn: var(--status-warn);
+  --color-status-error: var(--status-error);
+
+  --ease-swift: cubic-bezier(0.23, 0.88, 0.26, 0.92);
 }
 
-@media (prefers-color-scheme: dark) {
+:root {
+  /* Devouring Details-inspired: gray chrome + white sheet + #ff5800 */
+  --chrome: #ededed;
+  --sheet: #ffffff;
+
+  --background: #fcfcfc;
+  --background-50: #f8f8f8;
+  --background-100: #f3f3f3;
+  --background-200: #ededed;
+  --background-300: #e8e8e8;
+  --background-400: #e2e2e2;
+  --background-500: #c7c7c7;
+  --background-600: #8f8f8f;
+  --background-700: #6f6f6f;
+
+  --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+
+  --primary: #ff5800;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f3f3;
+  --secondary-foreground: #171717;
+  --muted: #f8f8f8;
+  --muted-foreground: #6f6f6f;
+  --accent: color-mix(in srgb, #ff5800 6%, white);
+  --accent-foreground: #171717;
+
+  --destructive: #e5484d;
+  --destructive-foreground: #ffffff;
+  --border: #e2e2e2;
+  --input: #e2e2e2;
+  --ring: #ff5800;
+  --radius: 4px;
+
+  --brand: #ff5800;
+  --brand-foreground: #ffffff;
+  --signal: #ff5800;
+  --signal-soft: color-mix(in srgb, #ff5800 6%, white);
+
+  --status-ok: #30a46c;
+  --status-warn: #ffb224;
+  --status-error: #e5484d;
+
+  --header-height: 56px;
+  --sheet-max: 1200px;
+  --sheet-pad: 1rem;
+
+  /* Type scale inspired by devouringdetails.com
+     Kept on :root (not @theme) so Tailwind doesn't emit conflicting
+     text-* font-size utilities that freeze the sizes. */
+  --text-label: 13px;
+  --text-body: 16px;
+  --text-prose: 24px;
+  --text-title: 32px;
+  --leading-body: 24px;
+  --leading-prose: 40px;
+  --leading-title: 36px;
+  --tracking-title: -0.4px;
+  color-scheme: light;
+}
+
+@supports (color: color(display-p3 1 1 1)) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --primary: color(display-p3 0.99 0.4 0.02);
+    --brand: color(display-p3 0.99 0.4 0.02);
+    --signal: color(display-p3 0.99 0.4 0.02);
+    --ring: color(display-p3 0.99 0.4 0.02);
+    --signal-soft: color(display-p3 0.99 0.4 0.02 / 0.06);
+    --accent: color(display-p3 0.99 0.4 0.02 / 0.06);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media (max-width: 639px) {
+  :root {
+    --text-prose: 20px;
+    --leading-prose: 32px;
+    --text-title: 28px;
+    --leading-title: 34px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --header-height: 64px;
+    --sheet-pad: 2rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth bg-chrome;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  html::-webkit-scrollbar {
+    display: none;
+  }
+
+  body {
+    @apply bg-chrome text-foreground antialiased;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  body::-webkit-scrollbar {
+    display: none;
+  }
+
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  .font-display {
+    overflow: visible;
+    padding-bottom: 0.08em;
+    letter-spacing: -0.4px;
+  }
+}
+
+@utility sheet {
+  @apply mx-auto w-full bg-sheet;
+  max-width: var(--sheet-max);
+}
+
+@utility sheet-pad {
+  padding-inline: var(--sheet-pad);
+}
+
+/* DD-inspired type roles */
+@utility text-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+@utility text-body {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  font-weight: 400;
+}
+
+@utility text-prose {
+  font-size: var(--text-prose);
+  line-height: var(--leading-prose);
+  font-weight: 500;
+}
+
+@utility text-title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  letter-spacing: var(--tracking-title);
+  font-weight: 400;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rule-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@utility animate-fade-up {
+  animation: fade-up 0.5s var(--ease-swift) both;
+}
+
+@utility animate-rule {
+  animation: rule-draw 0.7s var(--ease-swift) both;
+  transform-origin: left center;
+}
+
+@keyframes hero-flow {
+  from {
+    stroke-dashoffset: 24;
+    opacity: 0.35;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes hero-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes hero-core-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hero-dot-travel {
+  from {
+    left: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  to {
+    left: calc(100% - 6px);
+    opacity: 0;
+  }
+}
+
+@keyframes hero-ring-spin {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -80;
+  }
+}
+
+@keyframes hero-scan {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  8%,
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(var(--hero-scan-distance, 100px));
+    opacity: 0;
+  }
+}
+
+@keyframes hero-beam {
+  from {
+    stroke-dashoffset: 44;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes hero-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  95% {
+    opacity: 0.15;
+  }
+}
+
+@keyframes hero-sweep {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.hero-flow-line {
+  animation: hero-flow 1.1s var(--ease-swift) both;
+}
+
+.hero-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hero-pulse 2.4s var(--ease-swift) infinite;
+}
+
+.hero-flow-dot {
+  animation: hero-dot-travel 2.8s var(--ease-swift) infinite;
+}
+
+.hero-ring {
+  animation: hero-ring-spin 18s linear infinite;
+}
+
+.hero-core svg:first-child {
+  animation: hero-core-spin 48s linear infinite;
+}
+
+.hero-scan {
+  animation: hero-scan 4.5s var(--ease-swift) infinite;
+}
+
+.hero-beam {
+  animation: hero-beam 2.6s linear infinite;
+}
+
+.hero-blink {
+  animation: hero-blink 1.6s steps(1, end) infinite;
+}
+
+.hero-sweep {
+  animation: hero-sweep 3.2s var(--ease-swift) infinite;
+}
+
+/* Plug eases toward the socket along the isometric -v axis, then settles back. */
+@keyframes step-plug-slide {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  55%,
+  70% {
+    transform: translate(6.9px, -4px);
+  }
+}
+
+.step-plug-slide {
+  animation: step-plug-slide 2.6s var(--ease-swift) infinite;
+}
+
+/* Scroll-in build for the step illustrations. Elements stay hidden until
+   IsoReveal adds `is-shown`, then rise/drop/fade in with per-element delays. */
+@keyframes iso-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes iso-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes iso-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.iso-reveal .iso-rise,
+.iso-reveal .iso-drop,
+.iso-reveal .iso-fade {
+  opacity: 0;
+}
+
+.iso-reveal.is-shown .iso-rise {
+  animation: iso-rise 0.7s var(--ease-swift) both;
+  animation-delay: var(--iso-delay, 0s);
+}
+
+.iso-reveal.is-shown .iso-drop {
+  animation: iso-drop 0.6s var(--ease-swift) both;
+  animation-delay: var(--iso-delay, 0s);
+}
+
+.iso-reveal.is-shown .iso-fade {
+  animation: iso-fade 0.5s var(--ease-swift) both;
+  animation-delay: var(--iso-delay, 0s);
+}
+
+/* Hero Layers: four plates start as a tight deck, then fan open to their
+   resting positions. Details (marks, labels, bracket, caption) fade in after. */
+@keyframes hero-stack-open {
+  from {
+    transform: translateY(var(--stack-from));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.iso-reveal .hero-stack-plate {
+  transform-box: view-box;
+  transform-origin: 0 0;
+  transform: translateY(var(--stack-from));
+  /* Explicit stacking so Sources stays on top of the deck while opening. */
+  isolation: isolate;
+}
+
+.iso-reveal.is-shown .hero-stack-plate {
+  animation: hero-stack-open 1.05s var(--ease-swift) both;
+  animation-delay: var(--iso-delay, 0s);
+}
+
+.iso-reveal .hero-stack-detail {
+  opacity: 0;
+}
+
+.iso-reveal.is-shown .hero-stack-detail {
+  animation: iso-fade 0.55s var(--ease-swift) both;
+  animation-delay: var(--iso-delay, 0s);
+}
+
+/* Socket holes flash while the plug is closest. */
+@keyframes step-socket-flash {
+  0%,
+  45%,
+  85%,
+  100% {
+    fill: var(--background-600);
+  }
+  60%,
+  70% {
+    fill: var(--primary);
+  }
+}
+
+.step-socket-flash {
+  animation: step-socket-flash 2.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-flow-line,
+  .hero-pulse,
+  .hero-flow-dot,
+  .hero-ring,
+  .hero-scan,
+  .hero-beam,
+  .hero-blink,
+  .hero-sweep,
+  .step-plug-slide,
+  .step-socket-flash,
+  .hero-core svg:first-child {
+    animation: none;
+  }
+
+  .iso-reveal .iso-rise,
+  .iso-reveal .iso-drop,
+  .iso-reveal .iso-fade,
+  .iso-reveal .hero-stack-detail {
+    animation: none;
+    opacity: 1;
+  }
+
+  .iso-reveal .hero-stack-plate {
+    animation: none;
+    transform: none;
+  }
 }
