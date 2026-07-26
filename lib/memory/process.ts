@@ -13,6 +13,7 @@ import {
   enqueueDreamJob,
   failJob,
 } from "./jobs";
+import { memoryError, memoryLog } from "./log";
 
 async function setDocumentStatus(
   documentId: string,
@@ -36,9 +37,17 @@ export async function processIngestJob(documentId: string) {
   if (!doc) throw new Error(`Document ${documentId} not found`);
 
   const started = Date.now();
+  memoryLog("L1", "ingest start", {
+    documentId,
+    containerTag: doc.containerTag,
+    taskType: doc.taskType,
+    dreaming: doc.dreaming,
+    type: doc.type,
+  });
 
   try {
     // L2 Extract
+    memoryLog("L2", "extract start", { documentId });
     await setDocumentStatus(documentId, "extracting");
     const extracted = await extractDocument({
       content: doc.content,
@@ -49,16 +58,34 @@ export async function processIngestJob(documentId: string) {
       rawText: extracted.rawText,
       type: extracted.type,
     });
+    memoryLog("L2", "extract done", {
+      documentId,
+      type: extracted.type,
+      chars: extracted.rawText.length,
+      ms: Date.now() - started,
+    });
 
     // L3 Chunk
+    memoryLog("L3", "chunk start", { documentId });
     await setDocumentStatus(documentId, "chunking");
     await db.delete(chunks).where(eq(chunks.documentId, documentId));
     const parts = chunkText(extracted.rawText);
     if (parts.length === 0) {
       throw new Error("No chunks produced from content");
     }
+    memoryLog("L3", "chunk done", {
+      documentId,
+      chunks: parts.length,
+      tokens: parts.reduce((n, p) => n + p.tokenCount, 0),
+      ms: Date.now() - started,
+    });
 
     // L4 Embed
+    memoryLog("L4", "embed start", {
+      documentId,
+      chunks: parts.length,
+      model: EMBEDDING_MODEL,
+    });
     await setDocumentStatus(documentId, "embedding");
     const vectors = await embedTexts(parts.map((p) => p.content));
     const chunkRows = parts.map((part, i) => ({
@@ -71,8 +98,14 @@ export async function processIngestJob(documentId: string) {
       embeddingModel: EMBEDDING_MODEL,
     }));
     await db.insert(chunks).values(chunkRows);
+    memoryLog("L4", "embed done", {
+      documentId,
+      vectors: vectors.length,
+      ms: Date.now() - started,
+    });
 
     // L5 Index FTS
+    memoryLog("L5", "index start", { documentId });
     await setDocumentStatus(documentId, "indexing");
     await refreshChunkFts(documentId);
     await setDocumentStatus(documentId, "done", {
@@ -86,28 +119,57 @@ export async function processIngestJob(documentId: string) {
         chunkCount: chunkRows.length,
       },
     });
+    memoryLog("L5", "index done — document ready", {
+      documentId,
+      chunkCount: chunkRows.length,
+      ms: Date.now() - started,
+    });
 
     // Dream enqueue
     if (doc.taskType === "memory") {
       if (doc.dreaming === "instant") {
-        await enqueueDreamJob({
+        const dreamJobId = await enqueueDreamJob({
           documentId,
           userId: doc.userId,
           containerTag: doc.containerTag,
           delayMs: 0,
         });
+        memoryLog("L6", "dream enqueued (instant)", {
+          documentId,
+          dreamJobId,
+        });
       } else {
-        await enqueueDreamJob({
+        const dreamJobId = await enqueueDreamJob({
           documentId,
           userId: doc.userId,
           containerTag: doc.containerTag,
           delayMs: 2_000,
           coalesce: true,
         });
+        memoryLog("L6", "dream enqueued (dynamic)", {
+          documentId,
+          dreamJobId,
+          delayMs: 2_000,
+        });
       }
+    } else {
+      memoryLog("L6", "dream skipped (taskType != memory)", {
+        documentId,
+        taskType: doc.taskType,
+      });
     }
+
+    memoryLog("L1", "ingest complete", {
+      documentId,
+      ms: Date.now() - started,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    memoryError("L1", "ingest failed", {
+      documentId,
+      error: message,
+      ms: Date.now() - started,
+    });
     await setDocumentStatus(documentId, "failed", {
       error: message,
       processingMetadata: {
@@ -126,7 +188,19 @@ export async function processJobById(jobId: string) {
   const job = await db.query.jobs.findFirst({
     where: eq(jobs.id, jobId),
   });
-  if (!job) return;
+  if (!job) {
+    memoryLog("job", "missing job", { jobId });
+    return;
+  }
+
+  memoryLog("job", "run start", {
+    jobId,
+    type: job.type,
+    documentId: job.documentId,
+    containerTag: job.containerTag,
+    attempt: job.attempts,
+  });
+  const started = Date.now();
 
   try {
     if (job.type === "ingest") {
@@ -151,8 +225,19 @@ export async function processJobById(jobId: string) {
       throw new Error(`Unknown job type: ${job.type}`);
     }
     await completeJob(job.id);
+    memoryLog("job", "run done", {
+      jobId,
+      type: job.type,
+      ms: Date.now() - started,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    memoryError("job", "run failed", {
+      jobId,
+      type: job.type,
+      error: message,
+      ms: Date.now() - started,
+    });
     await failJob(job.id, message);
   }
 }
@@ -160,6 +245,11 @@ export async function processJobById(jobId: string) {
 export async function processNextJob() {
   const job = await claimNextJob();
   if (!job) return false;
+  memoryLog("job", "claimed", {
+    jobId: job.id,
+    type: job.type,
+    documentId: job.documentId,
+  });
   await processJobById(job.id);
   return true;
 }
@@ -183,7 +273,11 @@ export async function kickDocumentJob(documentId: string) {
       eq(jobs.status, "pending"),
     ),
   });
-  if (!job) return;
+  if (!job) {
+    memoryLog("job", "kick skipped — no pending ingest", { documentId });
+    return;
+  }
+  memoryLog("job", "kick ingest", { documentId, jobId: job.id });
   await db
     .update(jobs)
     .set({ status: "running", attempts: job.attempts + 1, updatedAt: new Date() })

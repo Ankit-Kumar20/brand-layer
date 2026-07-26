@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { memoryEdges, memories } from "@/db/schema";
 import { embedText } from "./embed";
+import { memoryLog } from "./log";
 import type { SearchInput } from "./schemas";
 
 type SearchHit = {
@@ -145,33 +146,43 @@ export async function searchMemoriesAndDocuments(
   userId: string,
   input: SearchInput,
 ) {
+  const started = Date.now();
+  memoryLog("L8", "search start", {
+    containerTag: input.containerTag,
+    mode: input.searchMode,
+    q: input.q.slice(0, 80),
+    limit: input.limit,
+    threshold: input.threshold,
+  });
+
   const embedding = await embedText(input.q);
+  memoryLog("L8", "query embedded", { ms: Date.now() - started });
   const results: SearchHit[] = [];
 
   if (input.searchMode === "memories" || input.searchMode === "hybrid") {
-    results.push(
-      ...(await searchMemories(
-        userId,
-        input.containerTag,
-        embedding,
-        input.q,
-        input.limit,
-        input.threshold,
-      )),
+    const memHits = await searchMemories(
+      userId,
+      input.containerTag,
+      embedding,
+      input.q,
+      input.limit,
+      input.threshold,
     );
+    memoryLog("L8", "memory hits", { count: memHits.length });
+    results.push(...memHits);
   }
 
   if (input.searchMode === "documents" || input.searchMode === "hybrid") {
-    results.push(
-      ...(await searchChunks(
-        userId,
-        input.containerTag,
-        embedding,
-        input.q,
-        input.limit,
-        input.threshold,
-      )),
+    const chunkHits = await searchChunks(
+      userId,
+      input.containerTag,
+      embedding,
+      input.q,
+      input.limit,
+      input.threshold,
     );
+    memoryLog("L8", "chunk hits", { count: chunkHits.length });
+    results.push(...chunkHits);
   }
 
   // Rank: similarity + static boost + slight recency via type preference
@@ -184,7 +195,13 @@ export async function searchMemoriesAndDocuments(
   const trimmed = results.slice(0, input.limit);
   if (input.includeRelated) {
     await attachRelated(trimmed);
+    memoryLog("L8", "related edges attached", { hits: trimmed.length });
   }
+
+  memoryLog("L8", "search done", {
+    total: trimmed.length,
+    ms: Date.now() - started,
+  });
 
   return {
     results: trimmed,

@@ -2,6 +2,7 @@ import { and, eq, lte, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { jobs } from "@/db/schema";
+import { memoryLog } from "./log";
 
 export async function enqueueIngestJob(documentId: string, userId: string) {
   const id = nanoid();
@@ -13,6 +14,7 @@ export async function enqueueIngestJob(documentId: string, userId: string) {
     status: "pending",
     runAfter: new Date(),
   });
+  memoryLog("job", "enqueue ingest", { jobId: id, documentId });
   return id;
 }
 
@@ -43,6 +45,12 @@ export async function enqueueDreamJob(opts: {
           updatedAt: new Date(),
         })
         .where(eq(jobs.id, existing.id));
+      memoryLog("job", "coalesce dream", {
+        jobId: existing.id,
+        documentId: opts.documentId,
+        containerTag: opts.containerTag,
+        delayMs,
+      });
       return existing.id;
     }
   }
@@ -56,6 +64,12 @@ export async function enqueueDreamJob(opts: {
     containerTag: opts.containerTag,
     status: "pending",
     runAfter: new Date(Date.now() + delayMs),
+  });
+  memoryLog("job", "enqueue dream", {
+    jobId: id,
+    documentId: opts.documentId,
+    containerTag: opts.containerTag,
+    delayMs,
   });
   return id;
 }
@@ -90,6 +104,7 @@ export async function completeJob(jobId: string) {
     .update(jobs)
     .set({ status: "done", updatedAt: new Date() })
     .where(eq(jobs.id, jobId));
+  memoryLog("job", "complete", { jobId });
 }
 
 export async function failJob(jobId: string, error: string) {
@@ -97,4 +112,5 @@ export async function failJob(jobId: string, error: string) {
     .update(jobs)
     .set({ status: "failed", error, updatedAt: new Date() })
     .where(eq(jobs.id, jobId));
+  memoryLog("job", "fail", { jobId, error });
 }
