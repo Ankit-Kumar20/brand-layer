@@ -3,7 +3,8 @@
  */
 
 import { extractText, getDocumentProxy } from "unpdf";
-import { memoryLog } from "./log";
+import { scrapeUrlWithFirecrawl } from "./firecrawl";
+import { memoryError, memoryLog, memoryWarn } from "./log";
 
 function htmlToText(html: string) {
   return html
@@ -159,17 +160,37 @@ export async function extractDocument(input: {
   }
 
   if (input.url) {
+    // Prefer Firecrawl for JS-heavy / marketing pages when configured.
+    try {
+      const markdown = await scrapeUrlWithFirecrawl(input.url);
+      if (markdown) {
+        return { rawText: markdown, type: "webpage" };
+      }
+    } catch (err) {
+      memoryWarn("L2", "firecrawl failed — falling back to fetch", {
+        url: input.url,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
     memoryLog("L2", "extract fetch url", { url: input.url });
     const res = await fetch(input.url, {
       headers: { "User-Agent": "brand-layer-memory/0.1" },
       signal: AbortSignal.timeout(20_000),
     });
     if (!res.ok) {
+      memoryError("L2", "url fetch failed", {
+        url: input.url,
+        status: res.status,
+      });
       throw new Error(`Failed to fetch URL (${res.status})`);
     }
     const contentType = res.headers.get("content-type") ?? "";
     const body = await res.text();
-    if (contentType.includes("text/plain") || contentType.includes("text/markdown")) {
+    if (
+      contentType.includes("text/plain") ||
+      contentType.includes("text/markdown")
+    ) {
       memoryLog("L2", "extract url text", { chars: body.trim().length });
       return { rawText: body.trim(), type: "text" };
     }
