@@ -1,11 +1,11 @@
-import { requireApiKey } from "@/lib/auth-api-key";
+import { ensurePublicUser } from "@/lib/auth-api-key";
 import { getProfile } from "@/lib/memory/profile";
 import { ProfileSchema } from "@/lib/memory/schemas";
 import { searchMemoriesAndDocuments } from "@/lib/memory/search";
 
 export async function POST(request: Request) {
   try {
-    const auth = await requireApiKey(request);
+    const userId = await ensurePublicUser();
     const body = await request.json();
     const parsed = ProfileSchema.safeParse(body);
     if (!parsed.success) {
@@ -15,11 +15,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const profile = await getProfile(auth.userId, parsed.data.containerTag);
+    const profile = await getProfile(userId, parsed.data.containerTag);
 
     let searchResults;
     if (parsed.data.includeSearch && parsed.data.q) {
-      searchResults = await searchMemoriesAndDocuments(auth.userId, {
+      searchResults = await searchMemoriesAndDocuments(userId, {
         q: parsed.data.q,
         containerTag: parsed.data.containerTag,
         searchMode: "hybrid",

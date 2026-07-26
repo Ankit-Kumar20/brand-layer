@@ -534,3 +534,63 @@
     transform: none;
   }
 }
+
+/* Memory playground — tokens scoped so they don't clash with landing */
+.playground-shell {
+  --paper: #e8eef2;
+  --paper-2: #d9e3ea;
+  --ink: #12202a;
+  --muted: #4d6270;
+  --line: #b7c5cf;
+  --panel: #f4f8fa;
+  --panel-2: #e3ebf1;
+  --accent: #0b6e6a;
+  --accent-fg: #f2fffd;
+  --ok: #1b7f4a;
+  --bad: #b42318;
+  --warn: #9a6700;
+  --warn-bg: #fff4ce;
+  --warn-line: #d4a72c;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 70% 45% at 0% 0%, #c5dde0 0%, transparent 55%),
+    radial-gradient(ellipse 50% 35% at 100% 10%, #c8d4e0 0%, transparent 50%),
+    linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+  color: var(--ink);
+}
+
+.playground-shell .panel {
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  backdrop-filter: blur(6px);
+  padding: 1.25rem 1.35rem;
+}
+
+@media (min-width: 640px) {
+  .playground-shell .panel {
+    padding: 1.5rem 1.75rem;
+  }
+}
+
+.playground-shell .field {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fbfeff;
+  color: var(--ink);
+  padding: 0.55rem 0.7rem;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.playground-shell .field:focus {
+  border-color: var(--accent);
+}
+
+.playground-shell .field:disabled {
+  opacity: 0.55;
+}
+
+.playground-shell code {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}

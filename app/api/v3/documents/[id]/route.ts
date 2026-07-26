@@ -1,18 +1,16 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { documents } from "@/db/schema";
-import { requireApiKey } from "@/lib/auth-api-key";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth = await requireApiKey(request);
     const { id } = await context.params;
 
     const doc = await db.query.documents.findFirst({
-      where: and(eq(documents.id, id), eq(documents.userId, auth.userId)),
+      where: eq(documents.id, id),
     });
 
     if (!doc) {

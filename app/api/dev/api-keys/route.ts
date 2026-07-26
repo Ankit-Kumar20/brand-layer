@@ -1,7 +1,8 @@
-import { createApiKey, ensureDevUser } from "@/lib/auth-api-key";
+import { createApiKey, ensurePublicUser } from "@/lib/auth-api-key";
 
 /**
- * Dev-only: mint an API key for the local Dev User.
+ * Dev-only: mint an API key for the shared public user.
+ * Kept for compatibility; v3 routes no longer require a key.
  * Disabled when NODE_ENV=production unless ALLOW_DEV_API_KEYS=true.
  */
 export async function POST(request: Request) {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
     // empty body ok
   }
 
-  const userId = await ensureDevUser();
+  const userId = await ensurePublicUser();
   const key = await createApiKey(userId, name);
 
   return Response.json({

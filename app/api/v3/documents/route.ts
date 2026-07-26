@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { documents } from "@/db/schema";
-import { requireApiKey } from "@/lib/auth-api-key";
+import { ensurePublicUser } from "@/lib/auth-api-key";
 import { contentHash } from "@/lib/memory/hash";
 import { enqueueIngestJob } from "@/lib/memory/jobs";
 import { kickDocumentJob } from "@/lib/memory/process";
@@ -11,7 +11,7 @@ import { DocumentAddSchema } from "@/lib/memory/schemas";
 
 export async function POST(request: Request) {
   try {
-    const auth = await requireApiKey(request);
+    const userId = await ensurePublicUser();
     const body = await request.json();
     const parsed = DocumentAddSchema.safeParse(body);
     if (!parsed.success) {
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     if (input.customId) {
       const existing = await db.query.documents.findFirst({
         where: and(
-          eq(documents.userId, auth.userId),
+          eq(documents.userId, userId),
           eq(documents.containerTag, input.containerTag),
           eq(documents.customId, input.customId),
         ),
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         documentId = nanoid();
         await db.insert(documents).values({
           id: documentId,
-          userId: auth.userId,
+          userId,
           containerTag: input.containerTag,
           customId: input.customId,
           content: input.content ?? null,
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       documentId = nanoid();
       await db.insert(documents).values({
         id: documentId,
-        userId: auth.userId,
+        userId,
         containerTag: input.containerTag,
         content: input.content ?? null,
         url: input.url ?? null,
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
       });
     }
 
-    await enqueueIngestJob(documentId, auth.userId);
+    await enqueueIngestJob(documentId, userId);
 
     after(async () => {
       try {
