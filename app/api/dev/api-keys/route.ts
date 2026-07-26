@@ -1,8 +1,8 @@
 import { createApiKey, ensurePublicUser } from "@/lib/auth-api-key";
 
 /**
- * Dev-only: mint an API key for the shared public user.
- * Kept for compatibility; v3 routes no longer require a key.
+ * Dev-only: mint an API key for the shared public user (not brand-scoped).
+ * For brand-scoped keys use POST /api/brands/:brandId/api-keys after migrate.
  * Disabled when NODE_ENV=production unless ALLOW_DEV_API_KEYS=true.
  */
 export async function POST(request: Request) {

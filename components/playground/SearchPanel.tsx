@@ -3,23 +3,28 @@
 import { useState, useTransition } from "react";
 import {
   ApiError,
+  answer,
   search,
+  type AnswerResponse,
   type SearchHit,
   type SearchResponse,
 } from "@/lib/playground/api-client";
 import { JsonViewer } from "./JsonViewer";
 
 export function SearchPanel({ containerTag }: { containerTag: string }) {
-  const [q, setQ] = useState("where does Alex work?");
+  const [mode, setMode] = useState<"search" | "answer">("answer");
+  const [q, setQ] = useState("What’s our brand voice?");
   const [searchMode, setSearchMode] = useState<
     "memories" | "documents" | "hybrid"
-  >("hybrid");
+  >("memories");
+  const [category, setCategory] = useState("");
   const [limit, setLimit] = useState(10);
   const [threshold, setThreshold] = useState(0.3);
   const [includeRelated, setIncludeRelated] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<SearchResponse | null>(null);
+  const [answerData, setAnswerData] = useState<AnswerResponse | null>(null);
 
   const disabled = !containerTag.trim() || !q.trim();
 
@@ -28,20 +33,40 @@ export function SearchPanel({ containerTag }: { containerTag: string }) {
     if (disabled) return;
     setError(null);
 
+    const filters = category
+      ? { category }
+      : undefined;
+
     startTransition(async () => {
       try {
-        const res = await search({
-          q: q.trim(),
-          containerTag: containerTag.trim(),
-          searchMode,
-          limit,
-          threshold,
-          includeRelated,
-        });
-        setData(res);
+        if (mode === "answer") {
+          const res = await answer({
+            q: q.trim(),
+            containerTag: containerTag.trim(),
+            limit,
+            threshold,
+            includeChunks: true,
+            filters,
+          });
+          setAnswerData(res);
+          setData(null);
+        } else {
+          const res = await search({
+            q: q.trim(),
+            containerTag: containerTag.trim(),
+            searchMode,
+            limit,
+            threshold,
+            includeRelated,
+            filters,
+          });
+          setData(res);
+          setAnswerData(null);
+        }
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : "Search failed");
+        setError(err instanceof ApiError ? err.message : "Request failed");
         setData(null);
+        setAnswerData(null);
       }
     });
   }
@@ -52,10 +77,37 @@ export function SearchPanel({ containerTag }: { containerTag: string }) {
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">
           Read · L8
         </p>
-        <h2 className="mt-1 text-lg font-semibold tracking-tight">Search</h2>
+        <h2 className="mt-1 text-lg font-semibold tracking-tight">
+          Search / Answer
+        </h2>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("answer")}
+            className={`h-9 rounded px-3 text-sm ${
+              mode === "answer"
+                ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                : "border border-[var(--line)] text-[var(--muted)]"
+            }`}
+          >
+            Answer
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("search")}
+            className={`h-9 rounded px-3 text-sm ${
+              mode === "search"
+                ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                : "border border-[var(--line)] text-[var(--muted)]"
+            }`}
+          >
+            Search
+          </button>
+        </div>
+
         <label className="block space-y-1.5">
           <span className="text-sm text-[var(--muted)]">q</span>
           <input
@@ -66,21 +118,39 @@ export function SearchPanel({ containerTag }: { containerTag: string }) {
           />
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {mode === "search" ? (
+            <label className="block space-y-1.5">
+              <span className="text-sm text-[var(--muted)]">searchMode</span>
+              <select
+                value={searchMode}
+                onChange={(e) =>
+                  setSearchMode(
+                    e.target.value as "memories" | "documents" | "hybrid",
+                  )
+                }
+                className="field text-sm"
+              >
+                <option value="memories">memories</option>
+                <option value="hybrid">hybrid</option>
+                <option value="documents">documents</option>
+              </select>
+            </label>
+          ) : null}
           <label className="block space-y-1.5">
-            <span className="text-sm text-[var(--muted)]">searchMode</span>
+            <span className="text-sm text-[var(--muted)]">category filter</span>
             <select
-              value={searchMode}
-              onChange={(e) =>
-                setSearchMode(
-                  e.target.value as "memories" | "documents" | "hybrid",
-                )
-              }
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
               className="field text-sm"
             >
-              <option value="hybrid">hybrid</option>
-              <option value="memories">memories</option>
-              <option value="documents">documents</option>
+              <option value="">(any)</option>
+              <option value="identity">identity</option>
+              <option value="assets">assets</option>
+              <option value="products">products</option>
+              <option value="campaigns">campaigns</option>
+              <option value="claims">claims</option>
+              <option value="restrictions">restrictions</option>
             </select>
           </label>
           <label className="block space-y-1.5">
@@ -108,26 +178,42 @@ export function SearchPanel({ containerTag }: { containerTag: string }) {
           </label>
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={includeRelated}
-            onChange={(e) => setIncludeRelated(e.target.checked)}
-            className="size-4 accent-[var(--accent)]"
-          />
-          includeRelated
-        </label>
+        {mode === "search" ? (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={includeRelated}
+              onChange={(e) => setIncludeRelated(e.target.checked)}
+              className="size-4 accent-[var(--accent)]"
+            />
+            includeRelated
+          </label>
+        ) : null}
 
         <button
           type="submit"
           disabled={disabled || pending}
           className="h-10 rounded bg-[var(--accent)] px-4 text-sm font-medium text-[var(--accent-fg)] transition hover:opacity-90 disabled:opacity-50"
         >
-          {pending ? "Searching…" : "POST /v3/search"}
+          {pending
+            ? "Working…"
+            : mode === "answer"
+              ? "POST /v3/answer"
+              : "POST /v3/search"}
         </button>
       </form>
 
       {error ? <p className="text-sm text-[var(--bad)]">{error}</p> : null}
+
+      {answerData ? (
+        <div className="space-y-3">
+          <p className="text-sm leading-relaxed">{answerData.answer}</p>
+          <p className="font-mono text-xs text-[var(--muted)]">
+            {answerData.memories.length} memories ·{" "}
+            {answerData.citations.length} citations
+          </p>
+        </div>
+      ) : null}
 
       {data ? (
         <div className="space-y-3">
@@ -142,13 +228,17 @@ export function SearchPanel({ containerTag }: { containerTag: string }) {
         </div>
       ) : null}
 
-      <JsonViewer data={data} />
+      <JsonViewer data={answerData ?? data} />
     </section>
   );
 }
 
 function HitRow({ hit }: { hit: SearchHit }) {
   const text = hit.memory ?? hit.content ?? "";
+  const category =
+    hit.metadata && typeof hit.metadata.category === "string"
+      ? hit.metadata.category
+      : null;
   return (
     <li className="border-l-2 border-[var(--line)] pl-3">
       <div className="flex flex-wrap items-baseline gap-2">
@@ -160,6 +250,11 @@ function HitRow({ hit }: { hit: SearchHit }) {
         </span>
         {hit.isStatic ? (
           <span className="font-mono text-[11px] text-[var(--ok)]">static</span>
+        ) : null}
+        {category ? (
+          <span className="font-mono text-[11px] text-[var(--muted)]">
+            {category}
+          </span>
         ) : null}
       </div>
       <p className="mt-1 text-sm leading-relaxed">{text}</p>

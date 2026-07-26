@@ -2,8 +2,8 @@ const TAG = "brand-layer.containerTag";
 const DOC = "brand-layer.lastDocumentId";
 
 export function loadContainerTag(): string {
-  if (typeof window === "undefined") return "user_alex";
-  return localStorage.getItem(TAG) ?? "user_alex";
+  if (typeof window === "undefined") return "brand_trybloom";
+  return localStorage.getItem(TAG) ?? "brand_trybloom";
 }
 
 export function saveContainerTag(value: string) {

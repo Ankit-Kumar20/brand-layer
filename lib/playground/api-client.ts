@@ -52,9 +52,18 @@ async function request<T>(
   return data as T;
 }
 
+export type IngestKind =
+  | "markdown"
+  | "pdf"
+  | "json"
+  | "url"
+  | "svg_asset";
+
 export type DocumentAddBody = {
   content?: string;
   url?: string;
+  pdfBase64?: string;
+  kind?: IngestKind;
   containerTag: string;
   customId?: string;
   metadata?: Record<string, string | number | boolean>;
@@ -87,6 +96,7 @@ export type SearchHit = {
   documentId?: string;
   similarity: number;
   isStatic?: boolean;
+  metadata?: Record<string, string | number | boolean> | null;
   relatedMemories?: Array<{ id: string; memory: string; relation: string }>;
 };
 
@@ -95,16 +105,48 @@ export type SearchResponse = {
   total: number;
 };
 
+export type BrandStaticCard = {
+  identity: string[];
+  assets: string[];
+  claims: string[];
+  restrictions: string[];
+};
+
+export type BrandDynamicCard = {
+  products: string[];
+  campaigns: string[];
+};
+
 export type ProfileResponse = {
   profile: {
     static: string[];
     dynamic: string[];
+    staticCard: BrandStaticCard;
+    dynamicCard: BrandDynamicCard;
   };
   searchResults?: SearchResponse;
 };
 
+export type AnswerResponse = {
+  answer: string;
+  memories: SearchHit[];
+  citations: Array<{ id: string; content: string; documentId?: string }>;
+};
+
+export type BrandFilters = {
+  category?: string;
+  assetType?: string;
+  market?: string;
+  product?: string;
+  isStatic?: boolean;
+  source?: string;
+};
+
 export function addDocument(body: DocumentAddBody) {
-  return request<{ id: string; status: string }>("/v3/documents", { body });
+  return request<{ id: string; status: string; containerTag?: string; type?: string }>(
+    "/v3/documents",
+    { body },
+  );
 }
 
 export function getDocument(id: string) {
@@ -118,6 +160,7 @@ export function search(body: {
   limit?: number;
   threshold?: number;
   includeRelated?: boolean;
+  filters?: BrandFilters;
 }) {
   return request<SearchResponse>("/v3/search", { body });
 }
@@ -130,5 +173,36 @@ export function getProfile(body: {
   return request<ProfileResponse>("/v3/profile", { body });
 }
 
-export const SAMPLE_CONTENT =
-  "My name is Alex. I prefer dark mode and work at Stripe as a PM.";
+export function answer(body: {
+  q: string;
+  containerTag: string;
+  limit?: number;
+  threshold?: number;
+  includeChunks?: boolean;
+  filters?: BrandFilters;
+}) {
+  return request<AnswerResponse>("/v3/answer", { body });
+}
+
+export const SAMPLE_MARKDOWN = `# Voice & tone
+
+Trybloom speaks with calm confidence.
+We never claim medical outcomes.
+Primary voice: warm, precise, hopeful.
+`;
+
+export const SAMPLE_COLORS_JSON = `{
+  "colors": {
+    "primary": "#0B3D2E",
+    "secondary": "#F4F7F5",
+    "accent": "#E8A838"
+  }
+}`;
+
+export const SAMPLE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" id="logo-mark" viewBox="0 0 64 64">
+  <title>Trybloom mark</title>
+  <circle cx="32" cy="32" r="28" fill="#0B3D2E"/>
+</svg>`;
+
+/** @deprecated use SAMPLE_MARKDOWN */
+export const SAMPLE_CONTENT = SAMPLE_MARKDOWN;

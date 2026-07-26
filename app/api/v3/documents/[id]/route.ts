@@ -1,19 +1,28 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { documents } from "@/db/schema";
+import { requireApiAuth } from "@/lib/auth-request";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    const auth = await requireApiAuth(request);
     const { id } = await context.params;
 
     const doc = await db.query.documents.findFirst({
-      where: eq(documents.id, id),
+      where: and(eq(documents.id, id), eq(documents.userId, auth.userId)),
     });
 
     if (!doc) {
+      return Response.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (
+      auth.forcedContainerTag &&
+      doc.containerTag !== auth.forcedContainerTag
+    ) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }
 

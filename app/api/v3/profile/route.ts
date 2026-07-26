@@ -1,4 +1,7 @@
-import { ensurePublicUser } from "@/lib/auth-api-key";
+import {
+  requireApiAuth,
+  resolveContainerTag,
+} from "@/lib/auth-request";
 import { memoryError, memoryLog } from "@/lib/memory/log";
 import { getProfile } from "@/lib/memory/profile";
 import { ProfileSchema } from "@/lib/memory/schemas";
@@ -6,7 +9,7 @@ import { searchMemoriesAndDocuments } from "@/lib/memory/search";
 
 export async function POST(request: Request) {
   try {
-    const userId = await ensurePublicUser();
+    const auth = await requireApiAuth(request);
     const body = await request.json();
     const parsed = ProfileSchema.safeParse(body);
     if (!parsed.success) {
@@ -19,18 +22,20 @@ export async function POST(request: Request) {
       );
     }
 
+    const containerTag = resolveContainerTag(auth, parsed.data.containerTag);
+
     memoryLog("api", "POST /v3/profile", {
-      containerTag: parsed.data.containerTag,
+      containerTag,
       includeSearch: !!parsed.data.includeSearch,
     });
 
-    const profile = await getProfile(userId, parsed.data.containerTag);
+    const profile = await getProfile(auth.userId, containerTag);
 
     let searchResults;
     if (parsed.data.includeSearch && parsed.data.q) {
-      searchResults = await searchMemoriesAndDocuments(userId, {
+      searchResults = await searchMemoriesAndDocuments(auth.userId, {
         q: parsed.data.q,
-        containerTag: parsed.data.containerTag,
+        containerTag,
         searchMode: "hybrid",
         limit: 10,
         threshold: 0.3,
@@ -47,6 +52,8 @@ export async function POST(request: Request) {
       profile: {
         static: profile.static,
         dynamic: profile.dynamic,
+        staticCard: profile.staticCard,
+        dynamicCard: profile.dynamicCard,
       },
       searchResults,
     });

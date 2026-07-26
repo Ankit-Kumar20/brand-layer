@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import {
   ApiError,
   getProfile,
+  type BrandDynamicCard,
+  type BrandStaticCard,
   type ProfileResponse,
 } from "@/lib/playground/api-client";
 import { JsonViewer } from "./JsonViewer";
@@ -43,7 +45,9 @@ export function ProfilePanel({ containerTag }: { containerTag: string }) {
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-[var(--muted)]">
           Read · L8
         </p>
-        <h2 className="mt-1 text-lg font-semibold tracking-tight">Profile</h2>
+        <h2 className="mt-1 text-lg font-semibold tracking-tight">
+          Brand profile
+        </h2>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -82,9 +86,9 @@ export function ProfilePanel({ containerTag }: { containerTag: string }) {
       {error ? <p className="text-sm text-[var(--bad)]">{error}</p> : null}
 
       {data ? (
-        <div className="grid gap-6 sm:grid-cols-2">
-          <FactList title="static" facts={data.profile.static} />
-          <FactList title="dynamic" facts={data.profile.dynamic} />
+        <div className="space-y-6">
+          <BrandCard title="Static card" card={data.profile.staticCard} />
+          <BrandCard title="Dynamic card" card={data.profile.dynamicCard} />
         </div>
       ) : null}
 
@@ -114,16 +118,33 @@ export function ProfilePanel({ containerTag }: { containerTag: string }) {
   );
 }
 
-function FactList({ title, facts }: { title: string; facts: string[] }) {
+function BrandCard({
+  title,
+  card,
+}: {
+  title: string;
+  card: BrandStaticCard | BrandDynamicCard;
+}) {
   return (
-    <div>
+    <div className="space-y-3">
       <h3 className="font-mono text-xs uppercase tracking-wide text-[var(--muted)]">
         {title}
       </h3>
+      {Object.entries(card).map(([key, facts]) => (
+        <FactList key={key} title={key} facts={facts as string[]} />
+      ))}
+    </div>
+  );
+}
+
+function FactList({ title, facts }: { title: string; facts: string[] }) {
+  return (
+    <div>
+      <h4 className="text-sm font-medium text-[var(--ink)]">{title}</h4>
       {facts.length === 0 ? (
-        <p className="mt-2 text-sm text-[var(--muted)]">None yet</p>
+        <p className="mt-1 text-sm text-[var(--muted)]">None yet</p>
       ) : (
-        <ul className="mt-2 space-y-2">
+        <ul className="mt-1 space-y-2">
           {facts.map((fact) => (
             <li
               key={fact}

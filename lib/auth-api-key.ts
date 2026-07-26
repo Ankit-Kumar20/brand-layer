@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { apiKeys, user } from "@/db/schema";
 import { nanoid } from "nanoid";
@@ -12,6 +12,7 @@ const LEGACY_DEV_EMAIL = "dev@brand-layer.local";
 export type ApiKeyAuth = {
   userId: string;
   keyId: string;
+  brandId: string | null;
 };
 
 export function hashApiKey(rawKey: string) {
@@ -27,17 +28,32 @@ export function generateApiKey() {
   };
 }
 
-export async function createApiKey(userId: string, name = "default") {
+export async function createApiKey(
+  userId: string,
+  name = "default",
+  brandId?: string | null,
+) {
   const { raw, hash, prefix } = generateApiKey();
   const id = nanoid();
-  await db.insert(apiKeys).values({
-    id,
-    userId,
-    name,
-    keyHash: hash,
-    keyPrefix: prefix,
-  });
-  return { id, raw, prefix, name };
+
+  // Omit brandId from INSERT when unset so pre-migrate DBs keep working.
+  if (brandId) {
+    await db.insert(apiKeys).values({
+      id,
+      userId,
+      brandId,
+      name,
+      keyHash: hash,
+      keyPrefix: prefix,
+    });
+  } else {
+    await db.execute(sql`
+      INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, created_at)
+      VALUES (${id}, ${userId}, ${name}, ${hash}, ${prefix}, NOW())
+    `);
+  }
+
+  return { id, raw, prefix, name, brandId: brandId ?? null };
 }
 
 export async function verifyApiKey(
@@ -50,12 +66,29 @@ export async function verifyApiKey(
   if (!raw) return null;
 
   const keyHash = hashApiKey(raw);
-  const row = await db.query.apiKeys.findFirst({
-    where: eq(apiKeys.keyHash, keyHash),
-  });
+
+  // Select only columns that exist pre-migrate; brand_id is optional.
+  const rows = await db.execute(sql`
+    SELECT id, user_id
+    FROM api_keys
+    WHERE key_hash = ${keyHash}
+    LIMIT 1
+  `);
+  const row = [...rows][0] as { id: string; user_id: string } | undefined;
   if (!row) return null;
 
-  return { userId: row.userId, keyId: row.id };
+  let brandId: string | null = null;
+  try {
+    const brandRows = await db.execute(sql`
+      SELECT brand_id FROM api_keys WHERE id = ${row.id} LIMIT 1
+    `);
+    const brandRow = [...brandRows][0] as { brand_id: string | null } | undefined;
+    brandId = brandRow?.brand_id ?? null;
+  } catch {
+    brandId = null;
+  }
+
+  return { userId: row.user_id, keyId: row.id, brandId };
 }
 
 /** Ensure the shared public user row exists (for FK ownership). */
@@ -65,7 +98,6 @@ export async function ensurePublicUser() {
   });
   if (byId) return byId.id;
 
-  // Reuse an existing public/dev row so previously ingested data stays visible.
   for (const email of [PUBLIC_USER_EMAIL, LEGACY_DEV_EMAIL]) {
     const row = await db.query.user.findFirst({
       where: eq(user.email, email),

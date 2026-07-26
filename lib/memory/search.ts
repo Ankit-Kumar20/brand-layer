@@ -13,12 +13,57 @@ type SearchHit = {
   documentId?: string;
   similarity: number;
   isStatic?: boolean;
+  metadata?: Record<string, string | number | boolean> | null;
   relatedMemories?: Array<{ id: string; memory: string; relation: string }>;
 };
 
 function vectorSql(embedding: number[]) {
-  // Numeric-only literal — safe to inline for pgvector casts
   return sql.raw(`'[${embedding.join(",")}]'::vector`);
+}
+
+function memoryFilterSql(filters: SearchInput["filters"]) {
+  if (!filters) return sql``;
+  const parts = [];
+  if (filters.isStatic !== undefined) {
+    parts.push(sql`AND is_static = ${filters.isStatic}`);
+  }
+  if (filters.category) {
+    parts.push(sql`AND metadata->>'category' = ${filters.category}`);
+  }
+  if (filters.assetType) {
+    parts.push(sql`AND metadata->>'assetType' = ${filters.assetType}`);
+  }
+  if (filters.market) {
+    parts.push(sql`AND metadata->>'market' = ${filters.market}`);
+  }
+  if (filters.product) {
+    parts.push(sql`AND metadata->>'product' = ${filters.product}`);
+  }
+  if (filters.source) {
+    parts.push(sql`AND metadata->>'source' = ${filters.source}`);
+  }
+  return parts.length ? sql.join(parts, sql` `) : sql``;
+}
+
+function documentFilterSql(filters: SearchInput["filters"]) {
+  if (!filters) return sql``;
+  const parts = [];
+  if (filters.category) {
+    parts.push(sql`AND d.metadata->>'category' = ${filters.category}`);
+  }
+  if (filters.assetType) {
+    parts.push(sql`AND d.metadata->>'assetType' = ${filters.assetType}`);
+  }
+  if (filters.market) {
+    parts.push(sql`AND d.metadata->>'market' = ${filters.market}`);
+  }
+  if (filters.product) {
+    parts.push(sql`AND d.metadata->>'product' = ${filters.product}`);
+  }
+  if (filters.source) {
+    parts.push(sql`AND d.metadata->>'source' = ${filters.source}`);
+  }
+  return parts.length ? sql.join(parts, sql` `) : sql``;
 }
 
 async function searchMemories(
@@ -28,13 +73,16 @@ async function searchMemories(
   q: string,
   limit: number,
   threshold: number,
+  filters: SearchInput["filters"],
 ): Promise<SearchHit[]> {
   const vec = vectorSql(embedding);
+  const filterSql = memoryFilterSql(filters);
   const rows = await db.execute(sql`
     SELECT
       id,
       memory,
       is_static,
+      metadata,
       (1 - (embedding <=> ${vec}))::float8 AS similarity
     FROM memories
     WHERE user_id = ${userId}
@@ -46,6 +94,7 @@ async function searchMemories(
         (1 - (embedding <=> ${vec})) >= ${threshold}
         OR fts @@ plainto_tsquery('english', ${q})
       )
+      ${filterSql}
     ORDER BY embedding <=> ${vec}
     LIMIT ${limit}
   `);
@@ -55,6 +104,7 @@ async function searchMemories(
       id: string;
       memory: string;
       is_static: boolean;
+      metadata: Record<string, string | number | boolean> | null;
       similarity: number;
     };
     return {
@@ -63,6 +113,7 @@ async function searchMemories(
       memory: row.memory,
       similarity: Number(row.similarity),
       isStatic: row.is_static,
+      metadata: row.metadata,
     };
   });
 }
@@ -74,8 +125,10 @@ async function searchChunks(
   q: string,
   limit: number,
   threshold: number,
+  filters: SearchInput["filters"],
 ): Promise<SearchHit[]> {
   const vec = vectorSql(embedding);
+  const filterSql = documentFilterSql(filters);
   const rows = await db.execute(sql`
     SELECT
       c.id,
@@ -91,6 +144,7 @@ async function searchChunks(
         (1 - (c.embedding <=> ${vec})) >= ${threshold}
         OR c.fts @@ plainto_tsquery('english', ${q})
       )
+      ${filterSql}
     ORDER BY c.embedding <=> ${vec}
     LIMIT ${limit}
   `);
@@ -144,7 +198,7 @@ async function attachRelated(hits: SearchHit[]) {
 
 export async function searchMemoriesAndDocuments(
   userId: string,
-  input: SearchInput,
+  input: SearchInput & { containerTag: string },
 ) {
   const started = Date.now();
   memoryLog("L8", "search start", {
@@ -153,6 +207,7 @@ export async function searchMemoriesAndDocuments(
     q: input.q.slice(0, 80),
     limit: input.limit,
     threshold: input.threshold,
+    filters: input.filters,
   });
 
   const embedding = await embedText(input.q);
@@ -167,6 +222,7 @@ export async function searchMemoriesAndDocuments(
       input.q,
       input.limit,
       input.threshold,
+      input.filters,
     );
     memoryLog("L8", "memory hits", { count: memHits.length });
     results.push(...memHits);
@@ -180,12 +236,12 @@ export async function searchMemoriesAndDocuments(
       input.q,
       input.limit,
       input.threshold,
+      input.filters,
     );
     memoryLog("L8", "chunk hits", { count: chunkHits.length });
     results.push(...chunkHits);
   }
 
-  // Rank: similarity + static boost + slight recency via type preference
   results.sort((a, b) => {
     const as = a.similarity + (a.isStatic ? 0.05 : 0);
     const bs = b.similarity + (b.isStatic ? 0.05 : 0);

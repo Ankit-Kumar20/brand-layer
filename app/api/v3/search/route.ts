@@ -1,11 +1,14 @@
-import { ensurePublicUser } from "@/lib/auth-api-key";
+import {
+  requireApiAuth,
+  resolveContainerTag,
+} from "@/lib/auth-request";
 import { memoryError, memoryLog } from "@/lib/memory/log";
 import { SearchSchema } from "@/lib/memory/schemas";
 import { searchMemoriesAndDocuments } from "@/lib/memory/search";
 
 export async function POST(request: Request) {
   try {
-    const userId = await ensurePublicUser();
+    const auth = await requireApiAuth(request);
     const body = await request.json();
     const parsed = SearchSchema.safeParse(body);
     if (!parsed.success) {
@@ -18,13 +21,18 @@ export async function POST(request: Request) {
       );
     }
 
+    const containerTag = resolveContainerTag(auth, parsed.data.containerTag);
+
     memoryLog("api", "POST /v3/search", {
-      containerTag: parsed.data.containerTag,
+      containerTag,
       mode: parsed.data.searchMode,
       q: parsed.data.q.slice(0, 80),
     });
 
-    const result = await searchMemoriesAndDocuments(userId, parsed.data);
+    const result = await searchMemoriesAndDocuments(auth.userId, {
+      ...parsed.data,
+      containerTag,
+    });
     memoryLog("api", "POST /v3/search ok", { total: result.total });
     return Response.json(result);
   } catch (err) {

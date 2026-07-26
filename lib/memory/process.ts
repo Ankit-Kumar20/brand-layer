@@ -53,6 +53,12 @@ export async function processIngestJob(documentId: string) {
       content: doc.content,
       url: doc.url,
       type: doc.type,
+      kind: doc.type,
+      metadata: doc.metadata,
+      pdfBase64:
+        doc.type === "pdf" && doc.content && !doc.content.trim().startsWith("%PDF")
+          ? doc.content
+          : null,
     });
     await setDocumentStatus(documentId, "extracting", {
       rawText: extracted.rawText,

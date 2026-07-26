@@ -3,16 +3,58 @@ import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import { documents } from "@/db/schema";
-import { ensurePublicUser } from "@/lib/auth-api-key";
+import {
+  requireApiAuth,
+  resolveContainerTag,
+} from "@/lib/auth-request";
 import { contentHash } from "@/lib/memory/hash";
 import { enqueueIngestJob } from "@/lib/memory/jobs";
 import { memoryError, memoryLog } from "@/lib/memory/log";
 import { kickDocumentJob } from "@/lib/memory/process";
 import { DocumentAddSchema } from "@/lib/memory/schemas";
 
+function resolveDocumentType(input: {
+  kind?: string;
+  content?: string;
+  url?: string;
+  pdfBase64?: string;
+}): string {
+  if (input.kind) {
+    if (input.kind === "svg_asset") return "svg_asset";
+    return input.kind;
+  }
+  if (input.pdfBase64) return "pdf";
+  if (input.url && !input.content) return "webpage";
+  return "text";
+}
+
+function defaultMetadata(
+  type: string,
+  metadata?: Record<string, string | number | boolean>,
+): Record<string, string | number | boolean> {
+  const base: Record<string, string | number | boolean> = { ...(metadata ?? {}) };
+  if (!base.source) {
+    if (type === "pdf" || type === "markdown" || type === "text") {
+      base.source = "brand_guidelines";
+    } else if (type === "json") {
+      base.source = "brand_tokens";
+      if (!base.category) base.category = "assets";
+      if (!base.assetType) base.assetType = "color";
+    } else if (type === "webpage") {
+      base.source = "web";
+      if (!base.category) base.category = "products";
+    } else if (type === "svg_asset") {
+      base.source = "asset";
+      if (!base.category) base.category = "assets";
+      if (!base.assetType) base.assetType = "logo";
+    }
+  }
+  return base;
+}
+
 export async function POST(request: Request) {
   try {
-    const userId = await ensurePublicUser();
+    const auth = await requireApiAuth(request);
     const body = await request.json();
     const parsed = DocumentAddSchema.safeParse(body);
     if (!parsed.success) {
@@ -26,18 +68,32 @@ export async function POST(request: Request) {
     }
 
     const input = parsed.data;
-    const hashSource = input.content?.trim() || input.url || "";
+    const containerTag = resolveContainerTag(auth, input.containerTag);
+    const type = resolveDocumentType(input);
+    const metadata = defaultMetadata(type, input.metadata);
+
+    const storedContent =
+      type === "pdf" && input.pdfBase64
+        ? input.pdfBase64
+        : (input.content ?? null);
+
+    const hashSource =
+      storedContent?.trim() ||
+      input.url ||
+      input.pdfBase64 ||
+      "";
     const hash = contentHash(hashSource);
-    const type = input.url && !input.content ? "webpage" : "text";
 
     memoryLog("api", "POST /v3/documents", {
-      containerTag: input.containerTag,
+      containerTag,
       customId: input.customId,
       taskType: input.taskType,
       dreaming: input.dreaming,
       type,
+      kind: input.kind,
       hasContent: Boolean(input.content?.trim()),
       hasUrl: Boolean(input.url),
+      hasPdf: Boolean(input.pdfBase64),
     });
 
     let documentId: string;
@@ -46,8 +102,8 @@ export async function POST(request: Request) {
     if (input.customId) {
       const existing = await db.query.documents.findFirst({
         where: and(
-          eq(documents.userId, userId),
-          eq(documents.containerTag, input.containerTag),
+          eq(documents.userId, auth.userId),
+          eq(documents.containerTag, containerTag),
           eq(documents.customId, input.customId),
         ),
       });
@@ -58,14 +114,14 @@ export async function POST(request: Request) {
         await db
           .update(documents)
           .set({
-            content: input.content ?? null,
+            content: storedContent,
             url: input.url ?? null,
             contentHash: hash,
             type,
             status: "queued",
             taskType: input.taskType,
             dreaming: input.dreaming,
-            metadata: input.metadata ?? null,
+            metadata,
             error: null,
             updatedAt: new Date(),
           })
@@ -74,33 +130,33 @@ export async function POST(request: Request) {
         documentId = nanoid();
         await db.insert(documents).values({
           id: documentId,
-          userId,
-          containerTag: input.containerTag,
+          userId: auth.userId,
+          containerTag,
           customId: input.customId,
-          content: input.content ?? null,
+          content: storedContent,
           url: input.url ?? null,
           contentHash: hash,
           type,
           status: "queued",
           taskType: input.taskType,
           dreaming: input.dreaming,
-          metadata: input.metadata ?? null,
+          metadata,
         });
       }
     } else {
       documentId = nanoid();
       await db.insert(documents).values({
         id: documentId,
-        userId,
-        containerTag: input.containerTag,
-        content: input.content ?? null,
+        userId: auth.userId,
+        containerTag,
+        content: storedContent,
         url: input.url ?? null,
         contentHash: hash,
         type,
         status: "queued",
         taskType: input.taskType,
         dreaming: input.dreaming,
-        metadata: input.metadata ?? null,
+        metadata,
       });
     }
 
@@ -109,7 +165,7 @@ export async function POST(request: Request) {
       customId: input.customId,
     });
 
-    await enqueueIngestJob(documentId, userId);
+    await enqueueIngestJob(documentId, auth.userId);
 
     after(async () => {
       try {
@@ -122,7 +178,7 @@ export async function POST(request: Request) {
       }
     });
 
-    return Response.json({ id: documentId, status: "queued" });
+    return Response.json({ id: documentId, status: "queued", containerTag, type });
   } catch (err) {
     if (err instanceof Response) return err;
     memoryError("api", "POST /v3/documents error", {

@@ -43,6 +43,7 @@ async function insertMemory(opts: {
   parentMemoryId?: string | null;
   rootMemoryId?: string | null;
   documentId: string;
+  metadata?: Record<string, string | number | boolean> | null;
 }) {
   const embedding = await embedText(opts.text);
   const id = nanoid();
@@ -62,6 +63,7 @@ async function insertMemory(opts: {
     rootMemoryId: rootId,
     embedding,
     embeddingModel: EMBEDDING_MODEL,
+    metadata: opts.metadata ?? null,
   });
 
   await refreshMemoryFts(id);
@@ -116,7 +118,12 @@ async function findNearDuplicate(
 
 async function applyOp(
   op: DreamOp,
-  ctx: { userId: string; containerTag: string; documentId: string },
+  ctx: {
+    userId: string;
+    containerTag: string;
+    documentId: string;
+    docMetadata?: Record<string, string | number | boolean> | null;
+  },
 ) {
   if (op.op === "ignore") {
     memoryLog("L6", "op ignore", {
@@ -160,6 +167,11 @@ async function applyOp(
     return;
   }
 
+  const metadata: Record<string, string | number | boolean> = {
+    ...(ctx.docMetadata ?? {}),
+  };
+  if (op.category) metadata.category = op.category;
+
   const embedding = await embedText(text);
   const dup = await findNearDuplicate(ctx.userId, ctx.containerTag, embedding);
   if (dup && (op.op === "new" || op.op === "extend" || op.op === "derive")) {
@@ -181,6 +193,7 @@ async function applyOp(
         text,
         isStatic: op.isStatic,
         documentId: ctx.documentId,
+        metadata,
       });
       memoryLog("L6", "op update→new (no target)", {
         documentId: ctx.documentId,
@@ -219,6 +232,10 @@ async function applyOp(
       parentMemoryId: old.id,
       rootMemoryId: old.rootMemoryId ?? old.id,
       documentId: ctx.documentId,
+      metadata: {
+        ...(old.metadata ?? {}),
+        ...metadata,
+      },
     });
     await addEdge(newId, old.id, "updates");
     memoryLog("L6", "op update", {
@@ -239,9 +256,14 @@ async function applyOp(
       isStatic: op.isStatic,
       isInference: op.op === "derive",
       documentId: ctx.documentId,
+      metadata,
     });
     if (op.targetMemoryId) {
-      await addEdge(newId, op.targetMemoryId, op.op === "derive" ? "derives" : "extends");
+      await addEdge(
+        newId,
+        op.targetMemoryId,
+        op.op === "derive" ? "derives" : "extends",
+      );
     }
     memoryLog("L6", `op ${op.op}`, {
       documentId: ctx.documentId,
@@ -260,6 +282,7 @@ async function applyOp(
     text,
     isStatic: op.isStatic,
     documentId: ctx.documentId,
+    metadata,
   });
   memoryLog("L6", "op new", {
     documentId: ctx.documentId,
@@ -288,6 +311,7 @@ export async function dreamDocument(documentId: string) {
       id: memories.id,
       memory: memories.memory,
       isStatic: memories.isStatic,
+      metadata: memories.metadata,
     })
     .from(memories)
     .where(
@@ -307,24 +331,38 @@ export async function dreamDocument(documentId: string) {
   });
 
   const openai = getOpenAI();
-  const system = `You extract atomic memory facts for a personal AI memory graph.
+  const system = `You extract atomic brand facts for a brand memory graph.
 Return JSON: { "ops": [ ... ] }
-Each op: { "op": "new"|"update"|"extend"|"derive"|"forget"|"ignore", "memory"?: string, "isStatic"?: boolean, "targetMemoryId"?: string, "reason"?: string }
+Each op: { "op": "new"|"update"|"extend"|"derive"|"forget"|"ignore", "memory"?: string, "isStatic"?: boolean, "category"?: "identity"|"assets"|"products"|"campaigns"|"claims"|"restrictions", "targetMemoryId"?: string, "reason"?: string }
 Rules:
-- Prefer atomic first-person/user facts.
-- Use update when a fact supersedes an existing one (set targetMemoryId).
-- Use extend when adding detail to an existing fact.
-- Use derive for reasonable inferences.
-- Use forget when content clearly invalidates a fact.
-- Mark durable identity/preferences as isStatic=true.
-- Ignore fluff, greetings, and one-off noise.`;
+- Prefer atomic brand facts (voice, colors, logos, claims, restrictions, products).
+- Categories:
+  - identity: name, mission, voice, tone, values
+  - assets: logos, colors, fonts, usage rules
+  - products: features, positioning, naming
+  - campaigns: seasonal/temporary messaging
+  - claims: approved messaging
+  - restrictions: don't say / don't use
+- Mark identity, assets, restrictions, and approved claims as isStatic=true.
+- Mark campaigns and ephemeral product pushes as isStatic=false.
+- Prefer approved/static facts over one-off campaign copy when they conflict (update or forget the weaker fact).
+- Use update when a guideline supersedes an existing fact (set targetMemoryId).
+- Use extend when adding detail without invalidating.
+- Use derive sparingly for reasonable inferences; prefer stated facts.
+- Use forget when content retires a claim, logo, or expired campaign.
+- Ignore fluff and unrelated noise.`;
 
-  const userPrompt = `Container: ${doc.containerTag}
+  const userPrompt = `Brand container: ${doc.containerTag}
+Document type: ${doc.type}
+Document metadata: ${JSON.stringify(doc.metadata ?? {})}
 
-Existing memories:
-${existing.map((m) => `- [${m.id}]${m.isStatic ? " (static)" : ""} ${m.memory}`).join("\n") || "(none)"}
+Existing brand memories:
+${existing.map((m) => {
+  const cat = m.metadata && typeof m.metadata.category === "string" ? m.metadata.category : "";
+  return `- [${m.id}]${m.isStatic ? " (static)" : ""}${cat ? ` [${cat}]` : ""} ${m.memory}`;
+}).join("\n") || "(none)"}
 
-New content:
+New brand content:
 ${truncate(doc.rawText, 12_000)}`;
 
   memoryLog("L6", "LLM extract start", {
@@ -370,6 +408,7 @@ ${truncate(doc.rawText, 12_000)}`;
       userId: doc.userId,
       containerTag: doc.containerTag,
       documentId: doc.id,
+      docMetadata: doc.metadata,
     });
   }
 

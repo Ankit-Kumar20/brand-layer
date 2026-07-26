@@ -12,7 +12,7 @@ import {
 } from "@/lib/playground/storage";
 
 export function Playground() {
-  const [containerTag, setContainerTag] = useState("user_alex");
+  const [containerTag, setContainerTag] = useState("brand_trybloom");
   const [documentId, setDocumentId] = useState("");
   const [ready, setReady] = useState(false);
 
@@ -50,12 +50,13 @@ export function Playground() {
             brand-layer
           </p>
           <h1 className="text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
-            Memory playground
+            Brand memory playground
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-[var(--muted)]">
-            Queue a document, wait for{" "}
-            <code className="font-mono text-[var(--ink)]">done</code>, then
-            search or load the profile.
+            Ingest markdown, PDF, JSON tokens, web URLs, or SVG logos — then
+            search, answer, or load the brand profile. Keep{" "}
+            <code className="font-mono text-[var(--ink)]">bun run worker</code>{" "}
+            running for dynamic dreams.
           </p>
         </div>
       </header>
@@ -63,12 +64,14 @@ export function Playground() {
       <main className="mx-auto grid max-w-5xl gap-10 px-5 py-10 sm:px-8">
         <div className="panel">
           <label className="mb-6 block max-w-md space-y-1.5">
-            <span className="text-sm text-[var(--muted)]">containerTag</span>
+            <span className="text-sm text-[var(--muted)]">
+              brandId / containerTag
+            </span>
             <input
               type="text"
               value={containerTag}
               onChange={(e) => handleContainerTagChange(e.target.value)}
-              placeholder="user_alex"
+              placeholder="brand_trybloom"
               className="field font-mono text-sm"
             />
           </label>
