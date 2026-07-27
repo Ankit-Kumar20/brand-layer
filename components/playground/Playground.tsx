@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { IngestPanel } from "./IngestPanel";
+import { McpConnectPanel } from "./McpConnectPanel";
 import { ProfilePanel } from "./ProfilePanel";
 import { SearchPanel } from "./SearchPanel";
 import {
@@ -90,6 +91,8 @@ export function Playground() {
             <ProfilePanel containerTag={containerTag} />
           </div>
         </div>
+
+        <McpConnectPanel containerTag={containerTag} />
       </main>
     </div>
   );
