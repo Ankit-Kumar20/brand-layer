@@ -21,7 +21,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const containerTag = resolveContainerTag(auth, parsed.data.containerTag);
+    const containerTag = await resolveContainerTag(
+      auth,
+      parsed.data.containerTag,
+    );
 
     memoryLog("api", "POST /v3/answer", {
       containerTag,

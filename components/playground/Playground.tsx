@@ -1,36 +1,150 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { IngestPanel } from "./IngestPanel";
 import { McpConnectPanel } from "./McpConnectPanel";
 import { ProfilePanel } from "./ProfilePanel";
 import { SearchPanel } from "./SearchPanel";
 import {
+  loadBrandId,
   loadContainerTag,
   loadLastDocumentId,
+  saveBrandId,
   saveContainerTag,
   saveLastDocumentId,
 } from "@/lib/playground/storage";
+import { authClient } from "@/lib/auth-client";
 
-export function Playground() {
-  const [containerTag, setContainerTag] = useState("brand_trybloom");
+export type PlaygroundBrand = {
+  id: string;
+  name: string;
+  slug: string;
+  containerTag: string;
+  organizationId: string;
+};
+
+type PlaygroundProps = {
+  user: { id: string; email: string; name: string };
+};
+
+export function Playground({ user }: PlaygroundProps) {
+  const [brands, setBrands] = useState<PlaygroundBrand[]>([]);
+  const [brandId, setBrandId] = useState("");
+  const [containerTag, setContainerTag] = useState("");
   const [documentId, setDocumentId] = useState("");
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [newBrandName, setNewBrandName] = useState("");
+  const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    setContainerTag(loadContainerTag());
-    setDocumentId(loadLastDocumentId());
-    setReady(true);
+  const selected = brands.find((b) => b.id === brandId) ?? null;
+
+  const refreshBrands = useCallback(async () => {
+    const res = await fetch("/api/brands", { credentials: "include" });
+    const data = (await res.json()) as {
+      brands?: PlaygroundBrand[];
+      error?: string;
+      detail?: string;
+    };
+    if (!res.ok) {
+      throw new Error(data.detail || data.error || `HTTP ${res.status}`);
+    }
+    return data.brands ?? [];
   }, []);
 
-  function handleContainerTagChange(value: string) {
-    setContainerTag(value);
-    saveContainerTag(value);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await refreshBrands();
+        if (cancelled) return;
+        setBrands(list);
+
+        const savedBrandId = loadBrandId();
+        const savedTag = loadContainerTag();
+        const match =
+          list.find((b) => b.id === savedBrandId) ||
+          list.find((b) => b.containerTag === savedTag) ||
+          list[0] ||
+          null;
+
+        if (match) {
+          setBrandId(match.id);
+          setContainerTag(match.containerTag);
+          saveBrandId(match.id);
+          saveContainerTag(match.containerTag);
+        }
+        setDocumentId(loadLastDocumentId());
+        setReady(true);
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(
+            err instanceof Error ? err.message : "Failed to load brands",
+          );
+          setReady(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshBrands]);
+
+  function selectBrand(nextId: string) {
+    const brand = brands.find((b) => b.id === nextId);
+    if (!brand) return;
+    setBrandId(brand.id);
+    setContainerTag(brand.containerTag);
+    saveBrandId(brand.id);
+    saveContainerTag(brand.containerTag);
+  }
+
+  function createBrand() {
+    const name = newBrandName.trim();
+    if (!name) return;
+    setLoadError(null);
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/brands", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ name }),
+        });
+        const data = (await res.json()) as {
+          brand?: PlaygroundBrand;
+          error?: string;
+          detail?: string;
+        };
+        if (!res.ok || !data.brand) {
+          setLoadError(data.detail || data.error || `HTTP ${res.status}`);
+          return;
+        }
+        const list = await refreshBrands();
+        setBrands(list);
+        setBrandId(data.brand.id);
+        setContainerTag(data.brand.containerTag);
+        saveBrandId(data.brand.id);
+        saveContainerTag(data.brand.containerTag);
+        setNewBrandName("");
+      } catch (err) {
+        setLoadError(err instanceof Error ? err.message : "Create failed");
+      }
+    });
   }
 
   function handleDocumentId(id: string) {
     setDocumentId(id);
     saveLastDocumentId(id);
+  }
+
+  async function signOut() {
+    await authClient.signOut();
+    window.location.href = "/";
   }
 
   if (!ready) {
@@ -47,9 +161,27 @@ export function Playground() {
     <div className="playground-shell">
       <header className="border-b border-[var(--line)]">
         <div className="mx-auto flex max-w-5xl flex-col gap-2 px-5 py-8 sm:px-8">
-          <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-            brand-layer
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+              brand-layer
+            </p>
+            <div className="flex items-center gap-3 text-sm text-[var(--muted)]">
+              <span className="truncate max-w-[14rem]">{user.email}</span>
+              <Link
+                href="/"
+                className="underline underline-offset-2 hover:text-[var(--ink)]"
+              >
+                Home
+              </Link>
+              <button
+                type="button"
+                onClick={signOut}
+                className="underline underline-offset-2 hover:text-[var(--ink)]"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
           <h1 className="text-3xl font-semibold tracking-tight text-[var(--ink)] sm:text-4xl">
             Brand memory playground
           </h1>
@@ -63,36 +195,83 @@ export function Playground() {
       </header>
 
       <main className="mx-auto grid max-w-5xl gap-10 px-5 py-10 sm:px-8">
-        <div className="panel">
-          <label className="mb-6 block max-w-md space-y-1.5">
-            <span className="text-sm text-[var(--muted)]">
-              brandId / containerTag
-            </span>
-            <input
-              type="text"
-              value={containerTag}
-              onChange={(e) => handleContainerTagChange(e.target.value)}
-              placeholder="brand_trybloom"
-              className="field font-mono text-sm"
-            />
-          </label>
-          <IngestPanel
-            containerTag={containerTag}
-            documentId={documentId}
-            onDocumentId={handleDocumentId}
-          />
+        <div className="panel space-y-4">
+          <div className="space-y-1.5">
+            <span className="text-sm text-[var(--muted)]">Brand / containerTag</span>
+            {brands.length > 0 ? (
+              <select
+                value={brandId}
+                onChange={(e) => selectBrand(e.target.value)}
+                className="field font-mono text-sm"
+              >
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.containerTag})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-sm text-[var(--muted)]">
+                No brands yet — create one below to get a containerTag.
+              </p>
+            )}
+            {selected ? (
+              <p className="font-mono text-xs text-[var(--muted)]">
+                containerTag={selected.containerTag}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <label className="block flex-1 space-y-1.5">
+              <span className="text-sm text-[var(--muted)]">Create brand</span>
+              <input
+                type="text"
+                value={newBrandName}
+                onChange={(e) => setNewBrandName(e.target.value)}
+                placeholder="Trybloom"
+                className="field text-sm"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={pending || !newBrandName.trim()}
+              onClick={createBrand}
+              className="rounded border border-[var(--line)] px-4 py-2 text-sm text-[var(--ink)] hover:bg-[var(--bg)] disabled:opacity-50"
+            >
+              {pending ? "Creating…" : "Create"}
+            </button>
+          </div>
+
+          {loadError ? (
+            <p className="text-sm text-red-600" role="alert">
+              {loadError}
+            </p>
+          ) : null}
         </div>
 
-        <div className="grid gap-10 lg:grid-cols-2">
-          <div className="panel">
-            <SearchPanel containerTag={containerTag} />
-          </div>
-          <div className="panel">
-            <ProfilePanel containerTag={containerTag} />
-          </div>
-        </div>
+        {containerTag ? (
+          <>
+            <div className="panel">
+              <IngestPanel
+                containerTag={containerTag}
+                documentId={documentId}
+                onDocumentId={handleDocumentId}
+              />
+            </div>
 
-        <McpConnectPanel containerTag={containerTag} />
+            <div className="grid gap-10 lg:grid-cols-2">
+              <div className="panel">
+                <SearchPanel containerTag={containerTag} />
+              </div>
+              <div className="panel">
+                <ProfilePanel containerTag={containerTag} />
+              </div>
+            </div>
+
+            <McpConnectPanel containerTag={containerTag} />
+          </>
+        ) : null}
       </main>
     </div>
   );

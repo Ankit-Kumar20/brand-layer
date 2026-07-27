@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
 import {
@@ -6,7 +6,7 @@ import {
   organizationMembers,
   organizations,
 } from "@/db/schema";
-import { ensurePublicUser } from "@/lib/auth-api-key";
+import { listUserBrands, requireUserSession } from "@/lib/auth-session";
 
 function slugify(value: string) {
   return value
@@ -18,19 +18,11 @@ function slugify(value: string) {
 }
 
 /**
- * Create an organization (+ optional first brand).
- * Dev/public-friendly until session org auth is wired.
- * Requires brands/organizations tables (run migrate first).
+ * Create an organization (+ optional first brand) for the signed-in user.
  */
 export async function POST(request: Request) {
-  const allowed =
-    process.env.NODE_ENV !== "production" ||
-    process.env.ALLOW_DEV_API_KEYS === "true";
-  if (!allowed) {
-    return Response.json({ error: "Not available" }, { status: 403 });
-  }
-
   try {
+    const user = await requireUserSession(request);
     const body = (await request.json()) as {
       name?: string;
       slug?: string;
@@ -43,7 +35,6 @@ export async function POST(request: Request) {
       return Response.json({ error: "name is required" }, { status: 400 });
     }
 
-    const userId = await ensurePublicUser();
     const orgId = nanoid();
     const orgSlug = body.slug?.trim() || slugify(name);
 
@@ -56,7 +47,7 @@ export async function POST(request: Request) {
     await db.insert(organizationMembers).values({
       id: nanoid(),
       organizationId: orgId,
-      userId,
+      userId: user.id,
       role: "owner",
     });
 
@@ -79,31 +70,41 @@ export async function POST(request: Request) {
     return Response.json({
       organization: { id: orgId, name, slug: orgSlug },
       brand,
-      warning:
-        "Requires migrated organizations/brands tables. Store brand id for API keys.",
     });
   } catch (err) {
+    if (err instanceof Response) return err;
     return Response.json(
       {
         error: "Failed to create organization",
         detail: err instanceof Error ? err.message : String(err),
-        hint: "Run db:migrate after applying the brand workspace migration.",
       },
       { status: 500 },
     );
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const rows = await db.select().from(organizations).limit(50);
+    const user = await requireUserSession(request);
+    const userBrands = await listUserBrands(user.id);
+    const orgIds = [...new Set(userBrands.map((b) => b.organizationId))];
+
+    if (orgIds.length === 0) {
+      return Response.json({ organizations: [] });
+    }
+
+    const rows = await db
+      .select()
+      .from(organizations)
+      .where(inArray(organizations.id, orgIds));
+
     return Response.json({ organizations: rows });
   } catch (err) {
+    if (err instanceof Response) return err;
     return Response.json(
       {
         error: "Organizations unavailable",
         detail: err instanceof Error ? err.message : String(err),
-        hint: "Run db:migrate for brand workspace tables.",
       },
       { status: 500 },
     );

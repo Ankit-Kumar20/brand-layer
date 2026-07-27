@@ -66,7 +66,7 @@ export function TopBar({ signedIn = false }: TopBarProps) {
           <div className="flex shrink-0 items-center gap-2">
             {signedIn ? (
               <Button asChild size="sm">
-                <Link href="/dashboard">Dashboard</Link>
+                <Link href="/playground">Playground</Link>
               </Button>
             ) : (
               <AuthModal>

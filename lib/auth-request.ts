@@ -2,10 +2,13 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { brands } from "@/db/schema";
 import {
-  ensurePublicUser,
   verifyApiKey,
   type ApiKeyAuth,
 } from "@/lib/auth-api-key";
+import {
+  getBrandByContainerTagIfMember,
+  getSessionUser,
+} from "@/lib/auth-session";
 
 export type RequestAuth = {
   userId: string;
@@ -17,9 +20,9 @@ export type RequestAuth = {
 
 /**
  * Resolve caller identity for /v3 routes.
- * - Bearer API key → user (+ optional brand containerTag after migrate)
- * - No key in non-production → shared public user (playground)
- * - No key in production → 401
+ * - Bearer API key → user (+ optional brand containerTag)
+ * - Better Auth session → user (must own/access the containerTag)
+ * - Otherwise → 401
  */
 export async function requireApiAuth(
   request: Request,
@@ -35,37 +38,52 @@ export async function requireApiAuth(
     };
   }
 
-  const allowPublic =
-    process.env.NODE_ENV !== "production" ||
-    process.env.ALLOW_PUBLIC_V3 === "true";
+  const sessionUser = await getSessionUser(request);
+  if (sessionUser) {
+    return {
+      userId: sessionUser.id,
+      keyId: null,
+      brandId: null,
+      forcedContainerTag: null,
+    };
+  }
 
-  if (!allowPublic) {
+  throw Response.json(
+    { error: "Unauthorized — Bearer API key or sign-in required" },
+    { status: 401 },
+  );
+}
+
+/**
+ * Prefer key-bound brand tag. For session auth, require membership on the tag.
+ */
+export async function resolveContainerTag(
+  auth: RequestAuth,
+  clientTag: string | undefined,
+): Promise<string> {
+  if (auth.forcedContainerTag) return auth.forcedContainerTag;
+
+  const tag = clientTag?.trim();
+  if (!tag) {
     throw Response.json(
-      { error: "Unauthorized — Bearer API key required" },
-      { status: 401 },
+      { error: "containerTag is required" },
+      { status: 400 },
     );
   }
 
-  const userId = await ensurePublicUser();
-  return {
-    userId,
-    keyId: null,
-    brandId: null,
-    forcedContainerTag: null,
-  };
-}
+  // Brand-scoped key already forced above. Session (or unscoped key):
+  // require the user to be a member of the brand that owns this tag.
+  if (!auth.keyId || !auth.brandId) {
+    const brand = await getBrandByContainerTagIfMember(auth.userId, tag);
+    if (!brand) {
+      throw Response.json(
+        { error: "Forbidden — no access to this containerTag" },
+        { status: 403 },
+      );
+    }
+  }
 
-/** Prefer key-bound brand tag over client-supplied containerTag. */
-export function resolveContainerTag(
-  auth: RequestAuth,
-  clientTag: string | undefined,
-): string {
-  if (auth.forcedContainerTag) return auth.forcedContainerTag;
-  if (clientTag?.trim()) return clientTag.trim();
-  throw Response.json(
-    { error: "containerTag is required" },
-    { status: 400 },
-  );
+  return tag;
 }
 
 async function resolveBrandContainerTag(
@@ -78,7 +96,6 @@ async function resolveBrandContainerTag(
     });
     return brand?.containerTag ?? null;
   } catch {
-    // brands table may not exist until migrate
     return null;
   }
 }

@@ -125,6 +125,7 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
       try {
         const res = await fetch("/api/playground/api-keys", {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",

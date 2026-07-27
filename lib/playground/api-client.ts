@@ -41,6 +41,7 @@ async function request<T>(
 
   const res = await fetch(path, {
     method: opts.method ?? (opts.body !== undefined ? "POST" : "GET"),
+    credentials: "include",
     headers,
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
   });

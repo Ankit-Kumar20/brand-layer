@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     }
 
     const input = parsed.data;
-    const containerTag = resolveContainerTag(auth, input.containerTag);
+    const containerTag = await resolveContainerTag(auth, input.containerTag);
     const type = resolveDocumentType(input);
     const metadata = defaultMetadata(type, input.metadata);
 
