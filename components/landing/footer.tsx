@@ -4,11 +4,15 @@ import Link from "next/link";
 
 import { AuthModal } from "@/components/auth/auth-modal";
 import { BrandLogo } from "@/components/logo/brand-logo";
+import { Logos } from "@/components/ui/logos";
 
 const footerLinks = [
   { href: "/#how-it-works", label: "Platform" },
-  { href: "/#pricing", label: "Pricing" },
+  { href: "/#connect", label: "Connect" },
   { href: "/#faq", label: "FAQ" },
+  { href: "/contact", label: "Contact" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
 ] as const;
 
 export function Footer() {
@@ -34,6 +38,15 @@ export function Footer() {
                 {link.label}
               </Link>
             ))}
+            <a
+              aria-label="X"
+              className="inline-flex items-center text-muted-foreground transition-colors duration-300 ease-[var(--ease-swift)] hover:text-foreground"
+              href="https://x.com/desinapp"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <Logos.x className="size-3.5" />
+            </a>
             <AuthModal>
               <button
                 className="text-label text-muted-foreground transition-colors duration-300 ease-[var(--ease-swift)] hover:text-foreground"

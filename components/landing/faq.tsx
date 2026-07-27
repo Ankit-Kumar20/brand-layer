@@ -7,9 +7,9 @@ const faqs = [
       "A live brand brain other AI tools pull from. You store colors, voice, rules, and refs once - Claude, Cursor, and ChatGPT use them via MCP or API. We don't generate images on our site.",
   },
   {
-    question: "How do you make money if you don't generate?",
+    question: "Is desin free?",
     answer:
-      "You pay for access to brand truth - workspace subscription for MCP/API, multi-brand, and team sync. Bloom meters image credits. We charge for the live brand agents pull.",
+      "Yes. Connect MCP or the API, save your kit, and pull live brand context into the tools you already use - no subscription.",
   },
   {
     question: "How is this different from a brand.md file?",
@@ -30,16 +30,6 @@ const faqs = [
     question: "Where does creation happen?",
     answer:
       "In the tools you already use. We supply context; Claude, Cursor, ChatGPT, Midjourney (via export), or your own product does the generating.",
-  },
-  {
-    question: "Who should pay for this?",
-    answer:
-      "Agencies with many clients, marketing teams writing in AI daily, and builders embedding brand into their product. Occasional ChatGPT users are usually fine with a file.",
-  },
-  {
-    question: "What's included in the workspace plan?",
-    answer:
-      "Live brand kits, MCP + API, multi-brand switching, team sync, hosted refs, task packs, and export prompts - no generation credit pool.",
   },
 ] as const;
 

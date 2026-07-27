@@ -2,14 +2,12 @@ import { headers } from "next/headers";
 
 import {
   Faq,
-  Features,
   Footer,
   GetStarted,
   Hero,
   HeroPreview,
   HowItWorks,
   McpSetup,
-  Pricing,
   SheetEdges,
   TopBar,
 } from "@/components/landing";
@@ -33,8 +31,6 @@ export default async function Home() {
             <HeroPreview />
             <HowItWorks />
             <McpSetup />
-            <Features />
-            <Pricing />
             <Faq />
             <GetStarted />
           </main>

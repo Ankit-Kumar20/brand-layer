@@ -13,5 +13,22 @@ export function AgentationToolbar() {
 
   if (!mounted) return null;
 
-  return <Agentation />;
+  return (
+    <>
+      {/* Keep Agentation above app chrome and dialogs. */}
+      <style>{`
+        [data-agentation-toolbar],
+        [data-feedback-toolbar],
+        [data-agentation-settings-panel],
+        [data-agentation-palette],
+        [data-annotation-marker],
+        [data-annotation-popup],
+        [data-design-placement],
+        [data-rearrange-section] {
+          z-index: 2147483000 !important;
+        }
+      `}</style>
+      <Agentation className="!z-[2147483000]" />
+    </>
+  );
 }

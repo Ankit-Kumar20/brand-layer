@@ -189,8 +189,6 @@ export function HeroIllustrationLayers() {
           >
             <title>Brand context compiled through every layer</title>
 
-            <rect fill="var(--background-50)" height="400" width="400" />
-
             {[...PLATES]
               .map((plate, i) => ({ plate, i }))
               .reverse()

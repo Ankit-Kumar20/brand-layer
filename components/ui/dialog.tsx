@@ -17,6 +17,7 @@ type DialogProps = {
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
+  descriptionClassName?: string;
   children: ReactNode;
   className?: string;
 };
@@ -26,6 +27,7 @@ export function Dialog({
   onOpenChange,
   title,
   description,
+  descriptionClassName,
   children,
   className,
 }: DialogProps) {
@@ -70,7 +72,7 @@ export function Dialog({
       aria-describedby={description ? descriptionId : undefined}
       aria-labelledby={titleId}
       aria-modal="true"
-      className="fixed inset-0 z-[100000] flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm"
       onClick={handleBackdropClick}
       role="dialog"
     >
@@ -89,7 +91,10 @@ export function Dialog({
             </h2>
             {description ? (
               <p
-                className="text-pretty text-muted-foreground text-sm"
+                className={cn(
+                  "text-pretty text-muted-foreground text-sm",
+                  descriptionClassName,
+                )}
                 id={descriptionId}
               >
                 {description}

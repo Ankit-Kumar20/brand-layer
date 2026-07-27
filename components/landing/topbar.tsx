@@ -16,7 +16,6 @@ type TopBarProps = {
 const navLinks = [
   { href: "/#how-it-works", label: "Platform" },
   { href: "/#connect", label: "Connect" },
-  { href: "/#pricing", label: "Pricing" },
   { href: "/#faq", label: "FAQ" },
 ] as const;
 
