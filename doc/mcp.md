@@ -15,7 +15,7 @@ brand-layer Next API             ← exists today
   documents · search · profile · answer
         │
         ▼
-ingest worker + dream            ← must run for fresh facts
+Trigger.dev ingest + dream      ← must run for fresh facts
 ```
 
 ```text
@@ -134,14 +134,14 @@ apps/mcp/   (or packages/mcp)
 2. Require Bearer on anything MCP will call in production.
 3. Prefer brand-scoped keys for Connect UX.
 4. Plan `POST /v3/memories/forget` (id or content) for a later `forget` tool.
-5. Ensure ingest/dream **worker** runs in every environment that accepts MCP ingest.
+5. Ensure Trigger.dev (`bun run trigger:dev` / deployed tasks) runs in every environment that accepts MCP ingest.
 
 ### Phase 1 — MCP MVP (API key)
 
 1. Auth gate: Bearer → `/v3/session` → props `{ apiKey, brandId, containerTag }`.
 2. Implement `brandContext`, `getBrandProfile`, `ingest`, `whoAmI`.
 3. Formatters that stay under agent context limits (answer first, then compact facts).
-4. Local Cursor config against `bun dev` + `bun run worker`.
+4. Local Cursor config against `bun dev` + `bun run trigger:dev`.
 
 ### Phase 2 — Product surface
 

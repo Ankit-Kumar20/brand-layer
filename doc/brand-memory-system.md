@@ -88,7 +88,7 @@ Rules of thumb:
 
 - Prefer **approved / static** facts over one-off campaign copy when they conflict.
 - Recompute **brand profile** after dream: static card (identity + assets + restrictions) + dynamic (active campaigns / products).
-- Always run the **worker** in environments that enqueue dream jobs (`bun run worker`).
+- Always run Trigger.dev tasks in environments that enqueue dream jobs (`bun run trigger:dev` locally, or a deployed Trigger project in prod).
 
 ## 4. Search & answer for real users
 
@@ -121,7 +121,7 @@ Optional filters: `assetType`, `market`, `product`, `isStatic`.
 
 Operational and platform work already implied by the current codebase:
 
-- [ ] Run ingest/dream **worker** in prod (dream jobs are not kicked by the API today)
+- [ ] Deploy Trigger.dev tasks in prod (`bun run trigger:deploy`) so ingest/dream runs without a local poller
 - [ ] Multi-tenant **auth** and brand isolation on all `/v3/*` routes
 - [ ] Object storage (e.g. S3) for binary assets; Postgres for metadata + vectors + FTS
 - [ ] Rewrite `/v3/*` → `/api/v3/*` (already in `next.config`) kept as public API shape

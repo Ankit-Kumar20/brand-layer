@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
@@ -10,7 +9,6 @@ import {
 import { contentHash } from "@/lib/memory/hash";
 import { enqueueIngestJob } from "@/lib/memory/jobs";
 import { memoryError, memoryLog } from "@/lib/memory/log";
-import { kickDocumentJob } from "@/lib/memory/process";
 import { DocumentAddSchema } from "@/lib/memory/schemas";
 
 function resolveDocumentType(input: {
@@ -165,18 +163,8 @@ export async function POST(request: Request) {
       customId: input.customId,
     });
 
-    await enqueueIngestJob(documentId, auth.userId);
-
-    after(async () => {
-      try {
-        await kickDocumentJob(documentId);
-      } catch (err) {
-        memoryError("api", "kickDocumentJob failed", {
-          documentId,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-    });
+    const runId = await enqueueIngestJob(documentId, { contentHash: hash });
+    memoryLog("api", "ingest triggered", { documentId, runId });
 
     return Response.json({ id: documentId, status: "queued", containerTag, type });
   } catch (err) {
