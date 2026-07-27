@@ -4,21 +4,18 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/** Two CTA types: primary (orange) and secondary (gray). Ghost is icon-only chrome. */
 const buttonVariants = cva(
-  "group/btn inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded border border-transparent font-medium text-sm outline-none transition-all duration-300 ease-[var(--ease-swift)] hover:cursor-pointer focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:text-foreground/60 [&_svg]:group-hover/btn:text-foreground",
+  "group/btn inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded border border-transparent font-medium text-sm outline-none transition-all duration-300 ease-[var(--ease-swift)] hover:cursor-pointer focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-white hover:bg-primary/85 hover:text-white [&_svg]:text-white/60 [&_svg]:group-hover/btn:text-white",
-        destructive:
-          "border-destructive/80 bg-destructive/10 text-destructive hover:border-destructive hover:bg-destructive/90 hover:text-white focus-visible:ring-destructive/20",
-        outline:
-          "border border-input bg-sheet hover:bg-background-100 hover:text-foreground",
+          "bg-primary text-white hover:bg-primary/85 hover:text-white [&_svg]:text-white/80 [&_svg]:group-hover/btn:text-white",
         secondary:
-          "bg-background-100 text-foreground hover:bg-background-300",
-        ghost: "hover:bg-background-100 hover:text-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-background-100 text-foreground hover:bg-background-300 [&_svg]:text-foreground [&_svg]:group-hover/btn:text-foreground",
+        ghost:
+          "hover:bg-background-100 hover:text-foreground [&_svg]:text-foreground/60 [&_svg]:group-hover/btn:text-foreground",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

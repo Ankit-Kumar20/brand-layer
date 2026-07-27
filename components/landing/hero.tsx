@@ -46,7 +46,7 @@ export function Hero({ signedIn = false }: HeroProps) {
             )}
             <Button
               asChild
-              className={`${heroCtaClassName} w-full has-[>svg]:gap-2 has-[>svg]:px-7 sm:w-auto [&_svg]:text-black [&_svg]:group-hover/btn:text-black`}
+              className={`${heroCtaClassName} w-full sm:w-auto`}
               size="lg"
               variant="secondary"
             >

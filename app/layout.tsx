@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   title: "desin - brand context for every AI tool",
   description:
     "Save your brand once. Claude, Cursor, and ChatGPT pull it via MCP. You create elsewhere - we sell live brand truth, not image credits.",
+  twitter: {
+    card: "summary_large_image",
+    creator: "@desinapp",
+    site: "@desinapp",
+  },
 };
 
 export default function RootLayout({

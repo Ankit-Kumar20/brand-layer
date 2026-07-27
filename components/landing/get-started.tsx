@@ -23,12 +23,9 @@ export function GetStarted() {
           <div className="flex flex-col gap-3 md:items-end">
             <AuthModal>
               <Button className="h-11 w-full px-8 font-medium md:min-w-[180px] md:w-auto">
-                Start free trial
+                Get started free
               </Button>
             </AuthModal>
-            <p className="text-label text-muted-foreground md:text-right">
-              14 days · MCP + API included
-            </p>
           </div>
         </div>
       </div>

@@ -102,8 +102,6 @@ Body uses `font-sans`. Display titles use the same Geist face with tighter track
 | `text-prose` | `24px` | `40px` | Medium `500` | Taglines, feature/step titles, hero preview |
 | `text-title` | `32px` | `36px` | Regular `400`, `-0.4px` | Section H2s, brand H1 |
 
-**Pricing exception:** plan price uses `font-display text-5xl` / `lg:text-6xl` with `tracking-[-1px]` — the only oversized display number on the page.
-
 **Copy helpers:** prefer `text-pretty` / `text-balance` on multi-line marketing text. Antialiased rendering; `font-synthesis-weight: none`.
 
 ---
@@ -116,20 +114,20 @@ Body uses `font-sans`. Display titles use the same Geist face with tighter track
 | Button default radius | `rounded` (maps to theme radius) |
 | Focus ring | `3px` ring at `ring/50`, border `ring` |
 
-**Buttons** (`components/ui/button.tsx`):
+**Buttons** (`components/ui/button.tsx`) — two CTA types only:
 
-| Variant | Look |
-| --- | --- |
-| `default` | Solid primary, white text; hover `primary/85` |
-| `secondary` | `background-100` fill; hover `background-300` |
-| `outline` | Border + sheet fill; hover `background-100` |
-| `ghost` / `link` | Minimal |
+| Variant | Look | Example |
+| --- | --- | --- |
+| `default` | Solid primary (`#ff5800`), white text; hover `primary/85` | Connect your brand |
+| `secondary` | `background-100` fill, foreground text; hover `background-300` | Connect MCP |
+
+`ghost` is reserved for icon-only chrome (e.g. dialog close), not marketing CTAs.
 
 Hero CTAs override to `h-12 px-7 text-body font-medium`. Section CTAs typically `h-11` full-width or min-width on larger breakpoints.
 
 **Tabs** (MCP Connect): selected = `bg-foreground text-sheet`; idle = muted with `hover:bg-background-100`. Same 300ms `--ease-swift` transitions as nav.
 
-**Cards:** avoided for marketing content. Borders appear only where they frame interaction or structure (pricing grid, step illustration frames, FAQ dividers, connector URL field). No hero cards, no soft elevated card stacks.
+**Cards:** avoided for marketing content. Borders appear only where they frame interaction or structure (step illustration frames, FAQ dividers, connector URL field). No hero cards, no soft elevated card stacks.
 
 ---
 
@@ -157,12 +155,10 @@ Hero CTAs override to `h-12 px-7 text-body font-medium`. Section CTAs typically 
 3. `HeroPreview` (short prose band between rules)
 4. `HowItWorks`
 5. `McpSetup` (`#connect`)
-6. `Features`
-7. `Pricing`
-8. `Faq`
-9. `GetStarted`
-10. `Footer`
-11. Dev-only `HeroIllustrationGallery` below the sheet (illustration QA)
+6. `Faq`
+7. `GetStarted`
+8. `Footer`
+9. Dev-only `HeroIllustrationGallery` below the sheet (illustration QA)
 
 ### Section header (shared)
 
@@ -187,9 +183,7 @@ Vertical rhythm: `py-16 md:py-24` (Get Started slightly shorter: `md:py-20`). He
 | Section | Structure |
 | --- | --- |
 | How it works | 3 columns (`sm+`); bordered illustration frame + numbered label + prose title |
-| Features | 2 / 3 columns; hairline `border-t` above list — no cards |
-| Connect | Client tabs → steps + URL copy field \| chat transcript mock |
-| Pricing | 2-cell bordered grid (price / included list) — interaction container, not a soft card |
+| Connect | 3 numbered steps + bordered URL copy strip with client marks — no tabs, no chat mock |
 | FAQ | Sticky left intro (`md:sticky md:top-28`) + accordion list with `divide-y` |
 | Get started | 2-col end-aligned CTA block |
 | Footer | 2-col; wordmark + blurb \| mono uppercase links |
@@ -237,7 +231,7 @@ Icon-only marks (Claude, Cursor, ChatGPT, Codex, OpenClaw). Names live in surrou
 
 - Sticky, `bg-sheet/90 backdrop-blur-md`, height `h-14` / `md:h-16`
 - Wordmark left (`text-body font-medium tracking-tight`)
-- Center nav (Platform / Connect / Pricing / FAQ) — hidden below `md`
+- Center nav (Platform / Connect / FAQ) — hidden below `md`
 - Sign in / Dashboard right (`Button` `size="sm"`)
 - Bottom animated `SectionRule`
 
