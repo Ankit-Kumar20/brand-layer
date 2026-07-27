@@ -78,7 +78,7 @@ Only applies when `taskType` is `memory`.
 
 Document status **done** means chunks are indexed. Memories may still be catching up under `dynamic`.
 
-Keep `bun run worker` running or dream jobs will sit in the queue.
+Keep `bun run trigger:dev` running (with `TRIGGER_SECRET_KEY` set) or ingest/dream tasks will not run.
 
 ### metadata JSON
 
@@ -202,7 +202,7 @@ Optional query paired with the profile. Empty → profile only (no useful nested
 
 | Goal | Setting |
 | --- | --- |
-| Fast playground facts | `taskType: memory`, `dreaming: instant`, worker running |
+| Fast playground facts | `taskType: memory`, `dreaming: instant`, `bun run trigger:dev` running |
 | Re-upload same guideline | Same `customId` (e.g. `voice`) |
 | Reference PDF only, no facts | `taskType: superrag` |
 | “What’s our voice?” | Answer mode, category `identity` (optional), memories |

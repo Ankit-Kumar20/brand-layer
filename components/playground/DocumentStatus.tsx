@@ -104,8 +104,8 @@ export function DocumentStatusPanel({ documentId }: { documentId: string }) {
 
       {stuckQueued ? (
         <p className="rounded border border-[var(--warn-line)] bg-[var(--warn-bg)] px-3 py-2 text-sm text-[var(--warn)]">
-          Still queued — is <code className="font-mono">bun run worker</code>{" "}
-          running?
+          Still queued — is <code className="font-mono">bun run trigger:dev</code>{" "}
+          running (and is <code className="font-mono">TRIGGER_SECRET_KEY</code> set)?
         </p>
       ) : null}
 

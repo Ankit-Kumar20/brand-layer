@@ -55,8 +55,8 @@ export function Playground() {
           <p className="max-w-xl text-sm leading-relaxed text-[var(--muted)]">
             Ingest markdown, PDF, JSON tokens, web URLs, or SVG logos — then
             search, answer, or load the brand profile. Keep{" "}
-            <code className="font-mono text-[var(--ink)]">bun run worker</code>{" "}
-            running for dynamic dreams.
+            <code className="font-mono text-[var(--ink)]">bun run trigger:dev</code>{" "}
+            running alongside the app.
           </p>
         </div>
       </header>

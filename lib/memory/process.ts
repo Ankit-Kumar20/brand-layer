@@ -1,18 +1,12 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
-import { chunks, documents, jobs } from "@/db/schema";
+import { chunks, documents } from "@/db/schema";
 import { chunkText } from "./chunk";
-import { dreamBatch, dreamDocument } from "./dream";
 import { embedTexts, EMBEDDING_MODEL } from "./embed";
 import { extractDocument } from "./extract";
 import { refreshChunkFts } from "./index";
-import {
-  claimNextJob,
-  completeJob,
-  enqueueDreamJob,
-  failJob,
-} from "./jobs";
+import { enqueueDreamJob } from "./jobs";
 import { memoryError, memoryLog } from "./log";
 
 async function setDocumentStatus(
@@ -131,30 +125,31 @@ export async function processIngestJob(documentId: string) {
       ms: Date.now() - started,
     });
 
-    // Dream enqueue
+    // Dream enqueue (Trigger.dev)
     if (doc.taskType === "memory") {
       if (doc.dreaming === "instant") {
-        const dreamJobId = await enqueueDreamJob({
+        const dreamRunId = await enqueueDreamJob({
           documentId,
           userId: doc.userId,
           containerTag: doc.containerTag,
-          delayMs: 0,
+          mode: "instant",
         });
         memoryLog("L6", "dream enqueued (instant)", {
           documentId,
-          dreamJobId,
+          dreamRunId,
         });
       } else {
-        const dreamJobId = await enqueueDreamJob({
+        const dreamRunId = await enqueueDreamJob({
           documentId,
           userId: doc.userId,
           containerTag: doc.containerTag,
           delayMs: 2_000,
           coalesce: true,
+          mode: "dynamic",
         });
         memoryLog("L6", "dream enqueued (dynamic)", {
           documentId,
-          dreamJobId,
+          dreamRunId,
           delayMs: 2_000,
         });
       }
@@ -188,105 +183,4 @@ export async function processIngestJob(documentId: string) {
     });
     throw err;
   }
-}
-
-export async function processJobById(jobId: string) {
-  const job = await db.query.jobs.findFirst({
-    where: eq(jobs.id, jobId),
-  });
-  if (!job) {
-    memoryLog("job", "missing job", { jobId });
-    return;
-  }
-
-  memoryLog("job", "run start", {
-    jobId,
-    type: job.type,
-    documentId: job.documentId,
-    containerTag: job.containerTag,
-    attempt: job.attempts,
-  });
-  const started = Date.now();
-
-  try {
-    if (job.type === "ingest") {
-      if (!job.documentId) throw new Error("ingest job missing documentId");
-      await processIngestJob(job.documentId);
-    } else if (job.type === "dream_batch") {
-      if (job.documentId) {
-        const doc = await db.query.documents.findFirst({
-          where: eq(documents.id, job.documentId),
-        });
-        if (doc?.dreaming === "instant") {
-          await dreamDocument(job.documentId);
-        } else if (job.userId && job.containerTag) {
-          await dreamBatch(job.userId, job.containerTag, job.documentId);
-        } else if (job.documentId) {
-          await dreamDocument(job.documentId);
-        }
-      } else if (job.userId && job.containerTag) {
-        await dreamBatch(job.userId, job.containerTag);
-      }
-    } else {
-      throw new Error(`Unknown job type: ${job.type}`);
-    }
-    await completeJob(job.id);
-    memoryLog("job", "run done", {
-      jobId,
-      type: job.type,
-      ms: Date.now() - started,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    memoryError("job", "run failed", {
-      jobId,
-      type: job.type,
-      error: message,
-      ms: Date.now() - started,
-    });
-    await failJob(job.id, message);
-  }
-}
-
-export async function processNextJob() {
-  const job = await claimNextJob();
-  if (!job) return false;
-  memoryLog("job", "claimed", {
-    jobId: job.id,
-    type: job.type,
-    documentId: job.documentId,
-  });
-  await processJobById(job.id);
-  return true;
-}
-
-export async function processPendingJobs(max = 10) {
-  let processed = 0;
-  for (let i = 0; i < max; i++) {
-    const did = await processNextJob();
-    if (!did) break;
-    processed++;
-  }
-  return processed;
-}
-
-/** Process a specific document's pending ingest job if present. */
-export async function kickDocumentJob(documentId: string) {
-  const job = await db.query.jobs.findFirst({
-    where: and(
-      eq(jobs.documentId, documentId),
-      eq(jobs.type, "ingest"),
-      eq(jobs.status, "pending"),
-    ),
-  });
-  if (!job) {
-    memoryLog("job", "kick skipped — no pending ingest", { documentId });
-    return;
-  }
-  memoryLog("job", "kick ingest", { documentId, jobId: job.id });
-  await db
-    .update(jobs)
-    .set({ status: "running", attempts: job.attempts + 1, updatedAt: new Date() })
-    .where(eq(jobs.id, job.id));
-  await processJobById(job.id);
 }

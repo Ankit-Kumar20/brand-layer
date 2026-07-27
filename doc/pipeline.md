@@ -120,9 +120,9 @@ Already in place:
 
 | Piece | Implement |
 | --- | --- |
-| Queue | start: DB `jobs` table + poller; later: Inngest / BullMQ / CF Workflows |
-| Pipeline | one worker runs L2→L5; separate worker for L6 |
-| Idempotency | content hash + `customId` upsert |
+| Queue | Trigger.dev tasks (`ingest-document`, `dream-batch`) |
+| Pipeline | ingest task runs L2→L5; dream task runs L6 |
+| Idempotency | content hash + `customId` upsert; Trigger idempotency keys |
 
 ---
 
@@ -141,7 +141,8 @@ lib/memory/
   dream.ts                # L6 (LLM)
   search.ts               # L8
   profile.ts              # L8
-workers/ingest.ts         # L9
+trigger/ingest.ts         # L9 ingest-document
+trigger/dream.ts          # L9 dream-batch
 ```
 
 ---
@@ -202,9 +203,10 @@ cp .env.example .env
 bun run db:migrate
 # or: bun run db:push  (after CREATE EXTENSION vector;)
 
-# 3. App + worker
+# 3. App + Trigger.dev worker
 bun run dev
-bun run worker   # separate terminal — polls jobs table
+bun run trigger:dev   # separate terminal — runs ingest/dream tasks
+# requires TRIGGER_SECRET_KEY + TRIGGER_PROJECT_REF in .env
 
 # 4. Mint a dev API key
 curl -s -X POST http://localhost:3000/api/dev/api-keys | jq
@@ -236,6 +238,6 @@ curl -s -X POST http://localhost:3000/v3/profile \
   -d '{"containerTag":"user_alex"}' | jq
 ```
 
-Implemented modules: `lib/memory/*`, routes under `app/api/v3/*`, worker `workers/ingest.ts`.
+Implemented modules: `lib/memory/*`, routes under `app/api/v3/*`, Trigger tasks in `trigger/`.
 
 See also: [architecture.md](./architecture.md) for conceptual core design.
