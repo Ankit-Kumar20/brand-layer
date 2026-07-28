@@ -8,21 +8,21 @@ import {
 const steps = [
   {
     id: "01" as HowItWorksStepId,
-    title: "Save your brand once",
+    title: "Ingest from any source",
     description:
-      "Colors, voice, rules, logos, and hosted references - one live kit your team can edit.",
+      "Point desin at your website, decks, Figma, socials, and references. Everything that defines the brand comes in.",
   },
   {
     id: "02" as HowItWorksStepId,
-    title: "Connect MCP or API",
+    title: "Systemise your brand",
     description:
-      "Plug into Claude, Cursor, ChatGPT, or your product. Agents pull the latest brand automatically.",
+      "desin unifies it into one live kit — palette, typography, voice, logos, and rules your team can keep current.",
   },
   {
     id: "03" as HowItWorksStepId,
-    title: "Create anywhere",
+    title: "Create everywhere",
     description:
-      "Posts, emails, banners, pages - made in the tools you already use. desin only supplies the brand.",
+      "Agents and apps pull the same brand truth. Pages, posts, emails, and campaigns stay on-brand wherever you work.",
   },
 ] as const;
 
@@ -33,8 +33,12 @@ export function HowItWorks() {
         <div className="mb-12 space-y-3 md:mb-16">
           <p className="text-label text-primary">Platform</p>
           <h2 className="text-title text-balance">
-            Brand context in three steps
+            Brand infrastructure in three steps
           </h2>
+          <p className="text-body max-w-xl text-pretty text-muted-foreground">
+            Stop pasting guidelines into every chat. Make brand callable —
+            like code.
+          </p>
         </div>
 
         <ol className="grid gap-10 md:grid-cols-3 md:gap-8 lg:gap-12">

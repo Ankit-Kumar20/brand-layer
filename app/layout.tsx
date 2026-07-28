@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "desin - brand context for every AI tool",
+  title: "desin — the brand layer for agents",
   description:
-    "Save your brand once. Claude, Cursor, and ChatGPT pull it via MCP. You create elsewhere - we sell live brand truth, not image credits.",
+    "Ingest your brand once. desin turns it into a live system every agent, app, and teammate can call — via MCP or API.",
   twitter: {
     card: "summary_large_image",
     creator: "@desinapp",

@@ -6,7 +6,6 @@ import { AuthModal } from "@/components/auth/auth-modal";
 import { HeroIllustration } from "@/components/landing/hero-illustration/active";
 import { Integrations } from "@/components/landing/integrations";
 import { Button } from "@/components/ui/button";
-import { Logos } from "@/components/ui/logos";
 
 type HeroProps = {
   signedIn?: boolean;
@@ -19,10 +18,14 @@ export function Hero({ signedIn = false }: HeroProps) {
     <div className="sheet-pad animate-fade-up flex flex-col justify-center gap-8 py-8 sm:gap-10 sm:py-[var(--sheet-pad)] md:gap-12">
       <div className="grid items-center gap-10 sm:gap-12 lg:grid-cols-2 lg:gap-16">
         <div className="flex max-w-xl flex-col gap-6 sm:gap-8">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             <h1 className="text-title font-medium text-pretty">
-              Live brand context for every AI tool
+              Create on-brand images, posts, and campaigns
             </h1>
+            <p className="text-prose text-pretty text-foreground/80">
+              Set up your brand once. Everything you make looks like you. In
+              chat, or from your own AI tools.
+            </p>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -32,7 +35,7 @@ export function Hero({ signedIn = false }: HeroProps) {
                 className={`${heroCtaClassName} w-full sm:w-auto`}
                 size="lg"
               >
-                <Link href="/playground">Open playground</Link>
+                <Link href="/playground">Open workspace</Link>
               </Button>
             ) : (
               <AuthModal>
@@ -40,7 +43,7 @@ export function Hero({ signedIn = false }: HeroProps) {
                   className={`${heroCtaClassName} w-full sm:w-auto`}
                   size="lg"
                 >
-                  Connect your brand
+                  Get started
                 </Button>
               </AuthModal>
             )}
@@ -50,10 +53,7 @@ export function Hero({ signedIn = false }: HeroProps) {
               size="lg"
               variant="secondary"
             >
-              <Link href="#connect">
-                <Logos.mcp className="size-4" />
-                Connect MCP
-              </Link>
+              <Link href="#how-it-works">See how it works</Link>
             </Button>
           </div>
 

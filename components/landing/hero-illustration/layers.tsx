@@ -5,16 +5,16 @@ import { useState, type CSSProperties } from "react";
 import { IsoReveal } from "@/components/landing/step-illustration/iso-reveal";
 
 /**
- * v4 - Layers: sources compile down through desin into every agent.
+ * v4 - Layers: brand sources compile into on-brand creative output.
  *
  * Welcome build: plates start stacked as a tight deck, fan open to their
  * resting positions, then marks / labels / bracket / caption fade in.
  */
 const PLATES = [
-  { label: "Sources", y: 110 },
-  { label: "Tokens", y: 168 },
-  { label: "Context", y: 226 },
-  { label: "Agents", y: 284 },
+  { label: "Inputs", y: 110 },
+  { label: "Brand", y: 168 },
+  { label: "Create", y: 226 },
+  { label: "Assets", y: 284 },
 ];
 
 const HALF_WIDTH = 108;
@@ -85,8 +85,8 @@ function slabSides(cx: number, cy: number) {
   return { left, right };
 }
 
-/** Sources: guideline doc lines, a type specimen, and color swatches. */
-function SourcesMarks({ y }: { y: number }) {
+/** Inputs: guideline lines, type specimen, and color swatches. */
+function InputsMarks({ y }: { y: number }) {
   const bars = [
     { t: -11, halfU: 13 },
     { t: 0, halfU: 9 },
@@ -120,8 +120,8 @@ function SourcesMarks({ y }: { y: number }) {
   );
 }
 
-/** Tokens: a row of token chips either side of the beam. */
-function TokensMarks({ y }: { y: number }) {
+/** Brand: palette chips either side of the beam. */
+function BrandMarks({ y }: { y: number }) {
   const chips = [
     { dx: -54, fill: "var(--primary)" },
     { dx: -26, fill: "var(--foreground)" },
@@ -137,12 +137,12 @@ function TokensMarks({ y }: { y: number }) {
   );
 }
 
-/** Context: compiled text lines with one brand line woven in. */
-function ContextMarks({ y }: { y: number }) {
+/** Create: three progressive bars — building the piece. */
+function CreateMarks({ y }: { y: number }) {
   const bars = [
-    { t: -11, halfU: 28, fill: "var(--background-600)" },
+    { t: -10, halfU: 26, fill: "var(--background-600)" },
     { t: 0, halfU: 18, fill: "var(--primary)" },
-    { t: 11, halfU: 24, fill: "var(--background-600)" },
+    { t: 10, halfU: 22, fill: "var(--background-600)" },
   ];
   return (
     <>
@@ -156,23 +156,23 @@ function ContextMarks({ y }: { y: number }) {
   );
 }
 
-/** Agents: three live nodes, the center one on the beam. */
-function AgentsMarks({ y }: { y: number }) {
+/** Assets: finished chips along the plate. */
+function AssetsMarks({ y }: { y: number }) {
   return (
     <>
-      {[-30, 0, 30].map((dx) => (
+      {[-40, -13, 13, 40].map((dx, i) => (
         <polygon
-          className={dx === 0 ? "hero-pulse" : undefined}
-          fill="var(--primary)"
+          className={i === 1 ? "hero-pulse" : undefined}
+          fill={i === 1 ? "var(--primary)" : "var(--background-500)"}
           key={dx}
-          points={patch(200 + dx, y, 5, 5)}
+          points={patch(200 + dx, y, 6, 6)}
         />
       ))}
     </>
   );
 }
 
-const PLATE_MARKS = [SourcesMarks, TokensMarks, ContextMarks, AgentsMarks];
+const PLATE_MARKS = [InputsMarks, BrandMarks, CreateMarks, AssetsMarks];
 
 export function HeroIllustrationLayers() {
   const [playId, setPlayId] = useState(0);
@@ -187,7 +187,7 @@ export function HeroIllustrationLayers() {
             viewBox="0 0 400 400"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <title>Brand context compiled through every layer</title>
+            <title>Brand sources become on-brand creative assets</title>
 
             {[...PLATES]
               .map((plate, i) => ({ plate, i }))

@@ -27,10 +27,12 @@ export function DocumentStatusPanel({ documentId }: { documentId: string }) {
 
   useEffect(() => {
     if (!documentId) {
-      setDoc(null);
-      setError(null);
-      setPolling(false);
-      setStuckQueued(false);
+      queueMicrotask(() => {
+        setDoc(null);
+        setError(null);
+        setPolling(false);
+        setStuckQueued(false);
+      });
       queuedStarted.current = null;
       return;
     }
@@ -39,7 +41,7 @@ export function DocumentStatusPanel({ documentId }: { documentId: string }) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stuckTimer: ReturnType<typeof setTimeout> | undefined;
     queuedStarted.current = null;
-    setStuckQueued(false);
+    queueMicrotask(() => setStuckQueued(false));
 
     async function tick() {
       setPolling(true);

@@ -61,7 +61,7 @@ function AuthModalInner({ children }: AuthModalProps) {
 
   useEffect(() => {
     if (searchParams.get("auth") === "1") {
-      setOpen(true);
+      queueMicrotask(() => setOpen(true));
     }
   }, [searchParams]);
 

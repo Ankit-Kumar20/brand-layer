@@ -8,6 +8,7 @@ import { Logos } from "@/components/ui/logos";
 
 const footerLinks = [
   { href: "/#how-it-works", label: "Platform" },
+  { href: "/#pricing", label: "Pricing" },
   { href: "/#connect", label: "Connect" },
   { href: "/#faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },
@@ -22,8 +23,8 @@ export function Footer() {
         <div className="space-y-3">
           <BrandLogo href={false} size="md" />
           <p className="text-body max-w-sm text-pretty text-muted-foreground">
-            Live brand context for AI tools. Save once - create on-brand
-            anywhere. We sell the source of truth, not the pixels.
+            The brand layer for agents. Ingest once — create on-brand
+            everywhere.
           </p>
         </div>
 
