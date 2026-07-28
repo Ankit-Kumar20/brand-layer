@@ -5,6 +5,7 @@ import {
   Footer,
   GetStarted,
   Hero,
+  HeroPreview,
   HowItWorks,
   McpSetup,
   Pricing,
@@ -28,6 +29,7 @@ export default async function Home() {
 
           <main className="flex flex-1 flex-col">
             <Hero signedIn={signedIn} />
+            <HeroPreview />
             <HowItWorks />
             <Pricing />
             <McpSetup />
