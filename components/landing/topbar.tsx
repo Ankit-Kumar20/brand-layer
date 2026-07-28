@@ -11,16 +11,36 @@ import { cn } from "@/lib/utils";
 
 type TopBarProps = {
   signedIn?: boolean;
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+  } | null;
+  userImage?: string | null;
+  hideBrandName?: boolean;
+  actionNav?: "playground" | "profile";
+  hideNav?: boolean;
 };
 
 const navLinks = [
   { href: "/#how-it-works", label: "Platform" },
+  { href: "/#pricing", label: "Pricing" },
   { href: "/#connect", label: "Connect" },
   { href: "/#faq", label: "FAQ" },
 ] as const;
 
-export function TopBar({ signedIn = false }: TopBarProps) {
+export function TopBar({
+  signedIn = false,
+  user,
+  userImage,
+  hideBrandName = false,
+  actionNav = "playground",
+  hideNav = false,
+}: TopBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const avatarSrc = user?.image || userImage;
+  const userInitial = (user?.name || user?.email || "U")[0]?.toUpperCase() || "U";
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -48,24 +68,54 @@ export function TopBar({ signedIn = false }: TopBarProps) {
     <header className="sticky top-0 z-50 w-full bg-sheet/90 backdrop-blur-md">
       <div className="sheet relative">
         <div className="sheet-pad relative flex h-14 items-center justify-between gap-3 md:h-16">
-          <BrandLogo size="md" />
+          <BrandLogo
+            href={signedIn ? "/app" : "/"}
+            markOnly={hideBrandName}
+            size="md"
+          />
 
-          <nav className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-8 md:flex">
-            {navLinks.map((link) => (
-              <Link
-                className="text-body font-medium text-muted-foreground transition-colors duration-300 ease-[var(--ease-swift)] hover:text-foreground"
-                href={link.href}
-                key={link.href}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+          {!hideNav && (
+            <nav className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 md:flex">
+              {navLinks.map((link) => (
+                <Button
+                  asChild
+                  className="text-body font-medium text-muted-foreground transition-colors duration-300 ease-[var(--ease-swift)] hover:bg-background-100 hover:text-foreground"
+                  key={link.href}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <Link href={link.href}>{link.label}</Link>
+                </Button>
+              ))}
+            </nav>
+          )}
 
           <div className="flex shrink-0 items-center gap-2">
-            {signedIn ? (
-              <Button asChild size="sm">
-                <Link href="/playground">Playground</Link>
+            {signedIn || user ? (
+              <Button
+                asChild
+                size="icon"
+                variant="ghost"
+                className="size-8 md:size-9 rounded shrink-0 overflow-hidden border-none p-0 transition-colors duration-200 focus-visible:ring-primary"
+                title={user?.name || user?.email || "Profile"}
+              >
+                <Link
+                  href={
+                    actionNav === "profile" ? "/app/profile" : "/playground"
+                  }
+                >
+                  {avatarSrc ? (
+                    <img
+                      src={avatarSrc}
+                      alt={user?.name || "User profile"}
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-full items-center justify-center font-mono text-xs font-semibold uppercase text-foreground bg-background-100">
+                      {userInitial}
+                    </span>
+                  )}
+                </Link>
               </Button>
             ) : (
               <AuthModal>
@@ -73,16 +123,18 @@ export function TopBar({ signedIn = false }: TopBarProps) {
               </AuthModal>
             )}
 
-            <button
-              aria-controls="mobile-nav"
-              aria-expanded={menuOpen}
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-              className="inline-flex size-8 items-center justify-center text-foreground transition-colors duration-300 ease-[var(--ease-swift)] hover:text-muted-foreground md:hidden"
-              onClick={() => setMenuOpen((open) => !open)}
-              type="button"
-            >
-              <MenuIcon open={menuOpen} />
-            </button>
+            {!hideNav && (
+              <button
+                aria-controls="mobile-nav"
+                aria-expanded={menuOpen}
+                aria-label={menuOpen ? "Close menu" : "Open menu"}
+                className="inline-flex size-8 items-center justify-center text-foreground transition-colors duration-300 ease-[var(--ease-swift)] hover:text-muted-foreground md:hidden"
+                onClick={() => setMenuOpen((open) => !open)}
+                type="button"
+              >
+                <MenuIcon open={menuOpen} />
+              </button>
+            )}
           </div>
           <SectionRule animate className="bottom-0" />
         </div>
@@ -94,18 +146,38 @@ export function TopBar({ signedIn = false }: TopBarProps) {
           )}
           id="mobile-nav"
         >
-          <ul className="sheet-pad flex flex-col py-2">
+          <ul className="sheet-pad flex flex-col items-center gap-2 py-3">
             {navLinks.map((link) => (
-              <li key={link.href}>
-                <Link
-                  className="flex min-h-11 items-center text-body font-medium text-muted-foreground transition-colors duration-300 ease-[var(--ease-swift)] hover:text-foreground"
-                  href={link.href}
+              <li className="w-full text-center" key={link.href}>
+                <Button
+                  asChild
+                  className="w-full justify-center text-body font-medium text-muted-foreground hover:text-foreground"
                   onClick={() => setMenuOpen(false)}
+                  size="sm"
+                  variant="ghost"
                 >
-                  {link.label}
-                </Link>
+                  <Link href={link.href}>{link.label}</Link>
+                </Button>
               </li>
             ))}
+            {signedIn && (
+              <li className="w-full border-t border-border/50 pt-2 text-center">
+                <Button
+                  asChild
+                  className="w-full justify-center"
+                  onClick={() => setMenuOpen(false)}
+                  size="sm"
+                >
+                  <Link
+                    href={
+                      actionNav === "profile" ? "/app/profile" : "/playground"
+                    }
+                  >
+                    {actionNav === "profile" ? "Profile" : "Playground"}
+                  </Link>
+                </Button>
+              </li>
+            )}
           </ul>
         </nav>
       </div>

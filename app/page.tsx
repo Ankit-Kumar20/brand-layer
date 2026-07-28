@@ -8,6 +8,7 @@ import {
   HeroPreview,
   HowItWorks,
   McpSetup,
+  Pricing,
   SheetEdges,
   TopBar,
 } from "@/components/landing";
@@ -30,6 +31,7 @@ export default async function Home() {
             <Hero signedIn={signedIn} />
             <HeroPreview />
             <HowItWorks />
+            <Pricing />
             <McpSetup />
             <Faq />
             <GetStarted />

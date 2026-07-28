@@ -9,6 +9,7 @@ Do not hand-author these marks. Refresh from upstream when needed.
 | OpenAI / ChatGPT | `public/icons/openai.svg` | [Wikimedia Commons - OpenAI logo 2025 (symbol)](https://commons.wikimedia.org/wiki/File:OpenAI_logo_2025_(symbol).svg) | https://openai.com/brand/ |
 | Codex | `public/icons/codex.svg` | [@lobehub/icons-static-svg@1.94.0](https://www.npmjs.com/package/@lobehub/icons-static-svg) `icons/codex-color.svg` | https://openai.com/codex |
 | OpenClaw | `public/icons/openclaw.svg` | same package `icons/openclaw-color.svg` | https://openclaw.ai |
+| Hermes Agent | `public/icons/hermes.svg` | same package `icons/hermesagent.svg` | https://hermes-agent.nousresearch.com |
 
 Also mirrored on disk for Cursor/Claude via jsDelivr (`simple-icons@16.27.0/icons/*.svg`) if you need static files.
 

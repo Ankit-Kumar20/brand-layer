@@ -56,7 +56,7 @@ export const heroIllustrationMeta: Record<
   },
   layers: {
     label: "Layers",
-    description: "Isometric stack: sources compile down into every agent",
+    description: "Isometric stack: inputs → brand → create → assets",
   },
   manifest: {
     label: "Manifest",

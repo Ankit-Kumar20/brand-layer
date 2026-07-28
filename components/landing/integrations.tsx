@@ -3,7 +3,7 @@ import { siClaude, siCursor, type SimpleIcon } from "simple-icons";
 /**
  * Icons only - names stay in page copy / aria-labels.
  * Claude & Cursor: simple-icons · ChatGPT: public/icons/openai.svg
- * Codex & OpenClaw: public/icons/*.svg (lobehub/icons-static-svg)
+ * Codex, OpenClaw, Hermes: public/icons/*.svg (lobehub/icons-static-svg)
  * See public/icons/SOURCES.md
  */
 
@@ -34,7 +34,7 @@ function BrandMark({
 
 type ToolId = "claude" | "cursor" | "chatgpt";
 
-type IntegrationId = ToolId | "codex" | "openclaw";
+type IntegrationId = ToolId | "codex" | "openclaw" | "hermes";
 
 type ToolDef =
   | { name: string; kind: "simple"; icon: SimpleIcon }
@@ -50,6 +50,7 @@ const integrations: Record<IntegrationId, ToolDef> = {
   ...tools,
   codex: { name: "Codex", kind: "file", src: "/icons/codex.svg" },
   openclaw: { name: "OpenClaw", kind: "file", src: "/icons/openclaw.svg" },
+  hermes: { name: "Hermes Agent", kind: "file", src: "/icons/hermes.svg" },
 };
 
 const integrationOrder: IntegrationId[] = [
@@ -58,6 +59,7 @@ const integrationOrder: IntegrationId[] = [
   "chatgpt",
   "codex",
   "openclaw",
+  "hermes",
 ];
 
 /** Icon only - put the label in surrounding copy. */

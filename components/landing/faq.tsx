@@ -4,17 +4,27 @@ const faqs = [
   {
     question: "What is desin?",
     answer:
-      "A live brand brain other AI tools pull from. You store colors, voice, rules, and refs once - Claude, Cursor, and ChatGPT use them via MCP or API. We don't generate images on our site.",
+      "desin is the brand layer for agents — a live system of your colors, voice, rules, logos, and references that any AI tool or product can call. Save the brand once; create on-brand everywhere.",
   },
   {
-    question: "Is desin free?",
+    question: "How does it work?",
     answer:
-      "Yes. Connect MCP or the API, save your kit, and pull live brand context into the tools you already use - no subscription.",
+      "Ingest what defines your brand (site, decks, Figma, social, assets). desin systemises it into one kit. Agents and apps pull that kit via MCP or API so every output stays consistent.",
   },
   {
     question: "How is this different from a brand.md file?",
     answer:
-      "A file needs pasting and goes stale. desin auto-pulls via MCP, syncs for teams, switches multi-brand cleanly, and hosts logos and refs agents can fetch.",
+      "A file needs pasting and goes stale. desin stays live, syncs for teams, switches multi-brand cleanly, and hosts logos and refs agents can fetch.",
+  },
+  {
+    question: "How does pricing work?",
+    answer:
+      "BYOK is $19/mo after a 14-day free trial on your first brand (generation on your keys). Starter $20/mo (100 credits). Pro $50/mo (350 credits). 10% off yearly.",
+  },
+  {
+    question: "Can I have multiple brands?",
+    answer:
+      "Yes. Keep as many brands as you need in one workspace — useful for agencies, portfolios, and multi-product companies.",
   },
   {
     question: "Do I need an API key for MCP?",
@@ -22,14 +32,9 @@ const faqs = [
       "No. Add the connector URL, sign in once in the browser, and the client keeps the session. API keys are for product integrations that call the REST API directly.",
   },
   {
-    question: "What's the difference between MCP and the REST API?",
-    answer:
-      "MCP plugs brand context into chat tools like Claude, Cursor, and ChatGPT. The REST API is for your own apps and workflows that need the same kit over HTTP.",
-  },
-  {
     question: "Where does creation happen?",
     answer:
-      "In the tools you already use. We supply context; Claude, Cursor, ChatGPT, Midjourney (via export), or your own product does the generating.",
+      "Wherever you already work. desin supplies the brand layer; Claude, Cursor, ChatGPT, or your own product does the generating.",
   },
 ] as const;
 

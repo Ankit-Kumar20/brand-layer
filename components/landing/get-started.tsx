@@ -12,18 +12,18 @@ export function GetStarted() {
           <div className="space-y-4">
             <p className="text-label text-primary">Get started</p>
             <h2 className="text-title text-pretty">
-              Put your brand in every AI chat
+              Turn your brand into a system
             </h2>
             <p className="text-body max-w-md text-pretty text-muted-foreground">
-              Save the kit once, connect MCP, and stop re-explaining your brand
-              every session. Create stays where it already is.
+              Drop in what defines you. desin makes it callable — for every
+              agent, app, and teammate.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 md:items-end">
             <AuthModal>
               <Button className="h-11 w-full px-8 font-medium md:min-w-[180px] md:w-auto">
-                Get started free
+                Start free trial
               </Button>
             </AuthModal>
           </div>

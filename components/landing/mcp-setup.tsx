@@ -19,13 +19,13 @@ const steps = [
     id: "02",
     title: "Paste the desin URL",
     description:
-      "Use the address below. The client starts sign-in and keeps the session for later chats.",
+      "Use the address below. Sign in once — the client keeps the session for later chats.",
   },
   {
     id: "03",
-    title: "Authorize once",
+    title: "Create on-brand",
     description:
-      "Approve in the browser. From then on, agents pull your live kit - palette, voice, rules, refs.",
+      "Agents pull your live kit — palette, voice, rules, and refs — without you re-pasting anything.",
   },
 ] as const;
 
@@ -54,8 +54,12 @@ export function McpSetup() {
         <div className="mb-12 space-y-3 md:mb-16">
           <p className="text-label text-primary">Connect</p>
           <h2 className="text-title text-balance">
-            One URL. Live brand in every chat.
+            Call your brand from any agent
           </h2>
+          <p className="text-body max-w-xl text-pretty text-muted-foreground">
+            MCP is one way in. Prefer embedding? The same kit is available over
+            REST.
+          </p>
         </div>
 
         <ol className="mb-12 grid gap-10 sm:mb-14 sm:grid-cols-3 sm:gap-8 lg:gap-12 md:mb-16">
@@ -73,7 +77,7 @@ export function McpSetup() {
         <div className="border border-border">
           <div className="flex flex-col gap-4 p-5 sm:p-6 md:flex-row md:items-end md:justify-between md:gap-8 md:p-8">
             <div className="min-w-0 flex-1 space-y-3">
-              <p className="text-label text-muted-foreground">Connector URL</p>
+              <p className="text-label text-muted-foreground">MCP URL</p>
               <code className="block truncate font-mono text-sm text-foreground sm:text-body">
                 {MCP_URL}
               </code>
@@ -101,7 +105,7 @@ export function McpSetup() {
               ))}
             </ul>
             <p className="text-body text-muted-foreground">
-              Same kit over REST API when you embed.
+              Same kit over REST when you embed.
             </p>
           </div>
         </div>
