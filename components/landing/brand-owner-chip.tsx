@@ -19,16 +19,40 @@ const INTRO: Message = {
 };
 
 const OWN_BRAND_YES = "Yes, I own a brand";
+const LAUNCHED_KEY = "desin.brand-owner-chip.launched";
+
+function readLaunched(): boolean {
+  try {
+    return window.localStorage.getItem(LAUNCHED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 export function BrandOwnerChip() {
   const [open, setOpen] = useState(false);
+  const [launched, setLaunched] = useState<boolean | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([INTRO]);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const timersRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    setLaunched(readLaunched());
+  }, []);
+
+  function markLaunched() {
+    setLaunched(true);
+    try {
+      window.localStorage.setItem(LAUNCHED_KEY, "1");
+    } catch {
+      // ignore unavailable storage
+    }
+  }
 
   function clearTimers() {
     for (const id of timersRef.current) window.clearTimeout(id);
@@ -64,11 +88,15 @@ export function BrandOwnerChip() {
 
   useEffect(() => {
     if (!showChat) return;
+    inputRef.current?.focus();
+  }, [showChat]);
+
+  useEffect(() => {
+    if (!showChat) return;
     const el = listRef.current;
     if (!el) return;
 
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    // After smooth scroll settles, refresh edge fades
     const timer = window.setTimeout(updateScrollEdges, 320);
     updateScrollEdges();
     return () => window.clearTimeout(timer);
@@ -80,7 +108,7 @@ export function BrandOwnerChip() {
     clearTimers();
     setOpen(false);
     setInput("");
-    setMessages([INTRO]);
+    markLaunched();
     setCanScrollUp(false);
     setCanScrollDown(false);
   }
@@ -112,10 +140,16 @@ export function BrandOwnerChip() {
 
   function openChat() {
     clearTimers();
-    setMessages([INTRO]);
     setOpen(true);
-    schedule(() => send(OWN_BRAND_YES), 350);
+
+    if (!launched) {
+      setMessages([INTRO]);
+      schedule(() => send(OWN_BRAND_YES), 350);
+      markLaunched();
+    }
   }
+
+  if (launched === null) return null;
 
   return (
     <div
@@ -123,19 +157,24 @@ export function BrandOwnerChip() {
         "fixed right-4 bottom-4 z-50 flex flex-col overflow-hidden border transition-[width,height,background-color,border-color,color] duration-500 ease-[var(--ease-swift)] md:right-6 md:bottom-6",
         open
           ? "h-[min(32rem,calc(100svh-2rem))] w-[min(22rem,calc(100vw-2rem))] border-border bg-sheet text-foreground"
-          : "h-10 w-[11.5rem] border-transparent bg-primary text-white",
+          : launched
+            ? "size-10 border-transparent bg-primary text-white"
+            : "h-10 w-[11.5rem] border-transparent bg-primary text-white",
       )}
       style={{ transformOrigin: "bottom right" }}
     >
       {!open ? (
         <button
           aria-expanded={false}
-          aria-label="Do you own a brand?"
-          className="flex size-full cursor-pointer items-center justify-center px-3 text-[15px] font-medium transition-colors duration-300 ease-[var(--ease-swift)] hover:bg-primary/85"
+          aria-label={launched ? "Open chat" : "Do you own a brand?"}
+          className={cn(
+            "flex size-full cursor-pointer items-center justify-center font-medium transition-colors duration-300 ease-[var(--ease-swift)] hover:bg-primary/85",
+            launched ? "px-0" : "px-3 text-[15px]",
+          )}
           onClick={openChat}
           type="button"
         >
-          Do you own a brand?
+          {launched ? <ChatIcon /> : "Do you own a brand?"}
         </button>
       ) : (
         <>
@@ -215,6 +254,7 @@ export function BrandOwnerChip() {
                   className="h-10 min-w-0 flex-1 bg-background-50 px-3 text-body text-foreground outline-none transition-colors duration-300 ease-[var(--ease-swift)] placeholder:text-muted-foreground focus:bg-background-100"
                   onChange={(event) => setInput(event.target.value)}
                   placeholder="Type a message…"
+                  ref={inputRef}
                   value={input}
                 />
                 <Button className="h-10 shrink-0 px-4" type="submit">
@@ -259,6 +299,23 @@ function CloseIcon() {
       viewBox="0 0 16 16"
     >
       <path d="M4 4l8 8M12 4l-8 8" />
+    </svg>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg
+      aria-hidden
+      className="size-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.75"
+      viewBox="0 0 16 16"
+    >
+      <path d="M3.5 3.5h9a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H7l-2.5 2.5V10.5h-1a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1Z" />
     </svg>
   );
 }
