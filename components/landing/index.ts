@@ -1,3 +1,4 @@
+export { BrandOwnerChip } from "@/components/landing/brand-owner-chip";
 export { BrowserFrame } from "@/components/landing/browser-frame";
 export { Faq } from "@/components/landing/faq";
 export { Footer } from "@/components/landing/footer";

@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 
 import {
+  BrandOwnerChip,
   Faq,
   Footer,
   GetStarted,
@@ -21,25 +22,28 @@ export default async function Home() {
   const signedIn = Boolean(session);
 
   return (
-    <div className="relative flex min-h-svh flex-col overflow-x-clip bg-sheet">
-      <div className="sheet flex min-h-svh flex-col">
-        <div className="relative flex flex-1 flex-col">
-          <SheetEdges />
-          <TopBar signedIn={signedIn} />
+    <>
+      <div className="relative flex min-h-svh flex-col overflow-x-clip bg-sheet">
+        <div className="sheet flex min-h-svh flex-col">
+          <div className="relative flex flex-1 flex-col">
+            <SheetEdges />
+            <TopBar signedIn={signedIn} />
 
-          <main className="flex flex-1 flex-col">
-            <Hero signedIn={signedIn} />
-            <HeroPreview />
-            <HowItWorks />
-            <Pricing />
-            <McpSetup />
-            <Faq />
-            <GetStarted />
-          </main>
+            <main className="flex flex-1 flex-col">
+              <Hero signedIn={signedIn} />
+              <HeroPreview />
+              <HowItWorks />
+              <Pricing />
+              <McpSetup />
+              <Faq />
+              <GetStarted />
+            </main>
+          </div>
+
+          <Footer />
         </div>
-
-        <Footer />
       </div>
-    </div>
+      <BrandOwnerChip />
+    </>
   );
 }
