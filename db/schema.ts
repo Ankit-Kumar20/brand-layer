@@ -90,51 +90,13 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const organizations = pgTable(
-  "organizations",
-  {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
-    slug: text("slug").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [uniqueIndex("organizations_slug_uidx").on(table.slug)],
-);
-
-export const organizationMembers = pgTable(
-  "organization_members",
-  {
-    id: text("id").primaryKey(),
-    organizationId: text("organization_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    role: text("role").notNull().default("member"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("organization_members_org_idx").on(table.organizationId),
-    index("organization_members_user_idx").on(table.userId),
-    uniqueIndex("organization_members_uidx").on(
-      table.organizationId,
-      table.userId,
-    ),
-  ],
-);
-
 export const brands = pgTable(
   "brands",
   {
     id: text("id").primaryKey(),
-    organizationId: text("organization_id")
+    userId: text("user_id")
       .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
+      .references(() => user.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     containerTag: text("container_tag").notNull(),
@@ -145,9 +107,12 @@ export const brands = pgTable(
       .notNull(),
   },
   (table) => [
-    index("brands_org_idx").on(table.organizationId),
-    uniqueIndex("brands_slug_uidx").on(table.organizationId, table.slug),
-    uniqueIndex("brands_container_tag_uidx").on(table.containerTag),
+    index("brands_user_idx").on(table.userId),
+    uniqueIndex("brands_user_slug_uidx").on(table.userId, table.slug),
+    uniqueIndex("brands_user_container_uidx").on(
+      table.userId,
+      table.containerTag,
+    ),
   ],
 );
 
@@ -364,7 +329,7 @@ export const userRelations = relations(user, ({ many }) => ({
   apiKeys: many(apiKeys),
   documents: many(documents),
   memories: many(memories),
-  organizationMembers: many(organizationMembers),
+  brands: many(brands),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -381,29 +346,10 @@ export const accountRelations = relations(account, ({ one }) => ({
   }),
 }));
 
-export const organizationsRelations = relations(organizations, ({ many }) => ({
-  members: many(organizationMembers),
-  brands: many(brands),
-}));
-
-export const organizationMembersRelations = relations(
-  organizationMembers,
-  ({ one }) => ({
-    organization: one(organizations, {
-      fields: [organizationMembers.organizationId],
-      references: [organizations.id],
-    }),
-    user: one(user, {
-      fields: [organizationMembers.userId],
-      references: [user.id],
-    }),
-  }),
-);
-
 export const brandsRelations = relations(brands, ({ one, many }) => ({
-  organization: one(organizations, {
-    fields: [brands.organizationId],
-    references: [organizations.id],
+  user: one(user, {
+    fields: [brands.userId],
+    references: [user.id],
   }),
   apiKeys: many(apiKeys),
 }));

@@ -6,7 +6,7 @@ import {
   ensureDefaultBrandApiKey,
   revealBrandApiKey,
 } from "@/lib/auth-api-key";
-import { getBrandIfMember, requireUserSession } from "@/lib/auth-session";
+import { getBrandIfOwner, requireUserSession } from "@/lib/auth-session";
 
 /**
  * List API key metadata for a brand.
@@ -20,7 +20,7 @@ export async function GET(
   try {
     const user = await requireUserSession(request);
     const { brandId } = await context.params;
-    const brand = await getBrandIfMember(user.id, brandId);
+    const brand = await getBrandIfOwner(user.id, brandId);
     if (!brand) {
       return Response.json({ error: "Brand not found" }, { status: 404 });
     }
@@ -93,7 +93,7 @@ export async function GET(
 
 /**
  * Mint an API key scoped to a brand (sets api_keys.brand_id).
- * Requires session + org membership. Stores encrypted ciphertext.
+ * Requires session + brand ownership. Stores encrypted ciphertext.
  */
 export async function POST(
   request: Request,
@@ -102,7 +102,7 @@ export async function POST(
   try {
     const user = await requireUserSession(request);
     const { brandId } = await context.params;
-    const brand = await getBrandIfMember(user.id, brandId);
+    const brand = await getBrandIfOwner(user.id, brandId);
     if (!brand) {
       return Response.json({ error: "Brand not found" }, { status: 404 });
     }

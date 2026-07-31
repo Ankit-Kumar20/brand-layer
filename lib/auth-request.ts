@@ -6,7 +6,7 @@ import {
   type ApiKeyAuth,
 } from "@/lib/auth-api-key";
 import {
-  getBrandByContainerTagIfMember,
+  getBrandByContainerTagIfOwner,
   getSessionUser,
 } from "@/lib/auth-session";
 
@@ -21,7 +21,7 @@ export type RequestAuth = {
 /**
  * Resolve caller identity for /v3 routes.
  * - Bearer API key → user (+ optional brand containerTag)
- * - Better Auth session → user (must own/access the containerTag)
+ * - Better Auth session → user (must own the containerTag)
  * - Otherwise → 401
  */
 export async function requireApiAuth(
@@ -55,7 +55,7 @@ export async function requireApiAuth(
 }
 
 /**
- * Prefer key-bound brand tag. For session auth, require membership on the tag.
+ * Prefer key-bound brand tag. For session auth, require ownership of the tag.
  */
 export async function resolveContainerTag(
   auth: RequestAuth,
@@ -72,9 +72,9 @@ export async function resolveContainerTag(
   }
 
   // Brand-scoped key already forced above. Session (or unscoped key):
-  // require the user to be a member of the brand that owns this tag.
+  // require the user to own a brand with this tag.
   if (!auth.keyId || !auth.brandId) {
-    const brand = await getBrandByContainerTagIfMember(auth.userId, tag);
+    const brand = await getBrandByContainerTagIfOwner(auth.userId, tag);
     if (!brand) {
       throw Response.json(
         { error: "Forbidden — no access to this containerTag" },

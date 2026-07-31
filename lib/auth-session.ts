@@ -2,11 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
-import {
-  brands,
-  organizationMembers,
-  organizations,
-} from "@/db/schema";
+import { brands } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import {
   createApiKey,
@@ -24,7 +20,7 @@ export type BrandRow = {
   name: string;
   slug: string;
   containerTag: string;
-  organizationId: string;
+  userId: string;
 };
 
 export type BrandWithApiKey = BrandRow & {
@@ -38,6 +34,22 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 64);
+}
+
+function toBrandRow(row: {
+  id: string;
+  name: string;
+  slug: string;
+  containerTag: string;
+  userId: string;
+}): BrandRow {
+  return {
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    containerTag: row.containerTag,
+    userId: row.userId,
+  };
 }
 
 /** Better Auth session from request cookies (API routes or RSC). */
@@ -69,27 +81,23 @@ export async function requireUserSession(
   return user;
 }
 
-/** Brands the user can access via organization membership. */
+/** Brands owned by the user. */
 export async function listUserBrands(userId: string): Promise<BrandRow[]> {
-  const memberships = await db
+  const rows = await db
     .select({
       id: brands.id,
       name: brands.name,
       slug: brands.slug,
       containerTag: brands.containerTag,
-      organizationId: brands.organizationId,
+      userId: brands.userId,
     })
     .from(brands)
-    .innerJoin(
-      organizationMembers,
-      eq(organizationMembers.organizationId, brands.organizationId),
-    )
-    .where(eq(organizationMembers.userId, userId));
+    .where(eq(brands.userId, userId));
 
-  return memberships;
+  return rows.map(toBrandRow);
 }
 
-export async function getBrandIfMember(
+export async function getBrandIfOwner(
   userId: string,
   brandId: string,
 ): Promise<BrandRow | null> {
@@ -99,22 +107,19 @@ export async function getBrandIfMember(
       name: brands.name,
       slug: brands.slug,
       containerTag: brands.containerTag,
-      organizationId: brands.organizationId,
+      userId: brands.userId,
     })
     .from(brands)
-    .innerJoin(
-      organizationMembers,
-      eq(organizationMembers.organizationId, brands.organizationId),
-    )
-    .where(
-      and(eq(brands.id, brandId), eq(organizationMembers.userId, userId)),
-    )
+    .where(and(eq(brands.id, brandId), eq(brands.userId, userId)))
     .limit(1);
 
-  return rows[0] ?? null;
+  return rows[0] ? toBrandRow(rows[0]) : null;
 }
 
-export async function getBrandByContainerTagIfMember(
+/** @deprecated Use getBrandIfOwner */
+export const getBrandIfMember = getBrandIfOwner;
+
+export async function getBrandByContainerTagIfOwner(
   userId: string,
   containerTag: string,
 ): Promise<BrandRow | null> {
@@ -124,27 +129,23 @@ export async function getBrandByContainerTagIfMember(
       name: brands.name,
       slug: brands.slug,
       containerTag: brands.containerTag,
-      organizationId: brands.organizationId,
+      userId: brands.userId,
     })
     .from(brands)
-    .innerJoin(
-      organizationMembers,
-      eq(organizationMembers.organizationId, brands.organizationId),
-    )
     .where(
-      and(
-        eq(brands.containerTag, containerTag),
-        eq(organizationMembers.userId, userId),
-      ),
+      and(eq(brands.containerTag, containerTag), eq(brands.userId, userId)),
     )
     .limit(1);
 
-  return rows[0] ?? null;
+  return rows[0] ? toBrandRow(rows[0]) : null;
 }
 
+/** @deprecated Use getBrandByContainerTagIfOwner */
+export const getBrandByContainerTagIfMember = getBrandByContainerTagIfOwner;
+
 /**
- * Resolve a brand the user can access by containerTag, or create one under
- * a personal playground org when the tag is free.
+ * Resolve the caller's brand for a containerTag, or create one for this user.
+ * Same tag may exist for other users — content stays isolated by user_id.
  * New brands always get a brand-scoped API key (encrypted at rest).
  */
 export async function ensureBrandForContainerTag(
@@ -160,39 +161,16 @@ export async function ensureBrandForContainerTag(
     );
   }
 
-  const existingMember = await getBrandByContainerTagIfMember(userId, tag);
-  if (existingMember) return existingMember;
-
-  const existing = await db.query.brands.findFirst({
-    where: eq(brands.containerTag, tag),
-  });
-  if (existing) {
-    throw Response.json(
-      { error: "containerTag is owned by another workspace" },
-      { status: 403 },
-    );
-  }
+  const existing = await getBrandByContainerTagIfOwner(userId, tag);
+  if (existing) return existing;
 
   const slug = slugify(tag.replace(/^brand_/, "") || tag) || nanoid(8);
-  const orgId = nanoid();
   const brandId = nanoid();
-  const orgSlug = `user-${userId.slice(0, 8)}-${slug}`.slice(0, 64);
   const brandName = opts?.name?.trim() || tag;
 
-  await db.insert(organizations).values({
-    id: orgId,
-    name: brandName,
-    slug: orgSlug,
-  });
-  await db.insert(organizationMembers).values({
-    id: nanoid(),
-    organizationId: orgId,
-    userId,
-    role: "owner",
-  });
   await db.insert(brands).values({
     id: brandId,
-    organizationId: orgId,
+    userId,
     name: brandName,
     slug,
     containerTag: tag,
@@ -205,15 +183,15 @@ export async function ensureBrandForContainerTag(
     name: brandName,
     slug,
     containerTag: tag,
-    organizationId: orgId,
+    userId,
     apiKey,
   };
 }
 
-/** Create a brand with a derived containerTag under the user's org (+ API key). */
+/** Create a user-owned brand with a derived containerTag (+ API key). */
 export async function createUserBrand(
   userId: string,
-  input: { name: string; slug?: string; organizationId?: string },
+  input: { name: string; slug?: string },
 ): Promise<BrandWithApiKey> {
   const name = input.name.trim();
   if (!name) {
@@ -224,45 +202,19 @@ export async function createUserBrand(
   const containerTag = `brand_${brandSlug}`;
 
   const taken = await db.query.brands.findFirst({
-    where: eq(brands.containerTag, containerTag),
+    where: and(eq(brands.userId, userId), eq(brands.containerTag, containerTag)),
   });
   if (taken) {
     throw Response.json(
-      { error: "Brand slug / containerTag already exists" },
+      { error: "You already have a brand with this containerTag" },
       { status: 409 },
     );
-  }
-
-  let organizationId = input.organizationId;
-  if (organizationId) {
-    const member = await db.query.organizationMembers.findFirst({
-      where: and(
-        eq(organizationMembers.organizationId, organizationId),
-        eq(organizationMembers.userId, userId),
-      ),
-    });
-    if (!member) {
-      throw Response.json({ error: "Forbidden" }, { status: 403 });
-    }
-  } else {
-    organizationId = nanoid();
-    await db.insert(organizations).values({
-      id: organizationId,
-      name,
-      slug: `org-${brandSlug}`.slice(0, 64),
-    });
-    await db.insert(organizationMembers).values({
-      id: nanoid(),
-      organizationId,
-      userId,
-      role: "owner",
-    });
   }
 
   const brandId = nanoid();
   await db.insert(brands).values({
     id: brandId,
-    organizationId,
+    userId,
     name,
     slug: brandSlug,
     containerTag,
@@ -275,7 +227,7 @@ export async function createUserBrand(
     name,
     slug: brandSlug,
     containerTag,
-    organizationId,
+    userId,
     apiKey,
   };
 }

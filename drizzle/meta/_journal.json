@@ -29,6 +29,13 @@
       "when": 1785519294216,
       "tag": "0003_wise_human_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785520536950,
+      "tag": "0004_ordinary_malice",
+      "breakpoints": true
     }
   ]
 }

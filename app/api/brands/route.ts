@@ -4,7 +4,7 @@ import {
   requireUserSession,
 } from "@/lib/auth-session";
 
-/** List brands the signed-in user can access. */
+/** List brands owned by the signed-in user. */
 export async function GET(request: Request) {
   try {
     const user = await requireUserSession(request);
@@ -22,14 +22,13 @@ export async function GET(request: Request) {
   }
 }
 
-/** Create a brand (and org if needed) + default encrypted API key. */
+/** Create a user-owned brand + default encrypted API key. */
 export async function POST(request: Request) {
   try {
     const user = await requireUserSession(request);
     const body = (await request.json().catch(() => ({}))) as {
       name?: string;
       slug?: string;
-      organizationId?: string;
     };
 
     if (!body.name?.trim()) {
@@ -39,7 +38,6 @@ export async function POST(request: Request) {
     const { apiKey, ...brand } = await createUserBrand(user.id, {
       name: body.name,
       slug: body.slug,
-      organizationId: body.organizationId,
     });
 
     return Response.json({

@@ -21,7 +21,7 @@ export type PlaygroundBrand = {
   name: string;
   slug: string;
   containerTag: string;
-  organizationId: string;
+  userId: string;
 };
 
 type PlaygroundProps = {
