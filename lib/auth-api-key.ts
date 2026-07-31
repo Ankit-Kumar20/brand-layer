@@ -1,7 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { apiKeys, user } from "@/db/schema";
+import {
+  decryptApiKey,
+  encryptApiKey,
+} from "@/lib/crypto/api-key-secret";
 import { nanoid } from "nanoid";
 
 /** Shared owner for unauthenticated / public API access. */
@@ -13,6 +17,18 @@ export type ApiKeyAuth = {
   userId: string;
   keyId: string;
   brandId: string | null;
+};
+
+export type CreatedApiKey = {
+  id: string;
+  raw: string;
+  prefix: string;
+  name: string;
+  brandId: string | null;
+  /** True when a new row was inserted. */
+  created: boolean;
+  /** True when raw was recovered from ciphertext (or just minted). */
+  recoverable: boolean;
 };
 
 export function hashApiKey(rawKey: string) {
@@ -32,11 +48,11 @@ export async function createApiKey(
   userId: string,
   name = "default",
   brandId?: string | null,
-) {
+): Promise<CreatedApiKey> {
   const { raw, hash, prefix } = generateApiKey();
   const id = nanoid();
+  const keyCiphertext = encryptApiKey(raw);
 
-  // Omit brandId from INSERT when unset so pre-migrate DBs keep working.
   if (brandId) {
     await db.insert(apiKeys).values({
       id,
@@ -45,15 +61,125 @@ export async function createApiKey(
       name,
       keyHash: hash,
       keyPrefix: prefix,
+      keyCiphertext,
     });
   } else {
-    await db.execute(sql`
-      INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, created_at)
-      VALUES (${id}, ${userId}, ${name}, ${hash}, ${prefix}, NOW())
-    `);
+    try {
+      await db.insert(apiKeys).values({
+        id,
+        userId,
+        name,
+        keyHash: hash,
+        keyPrefix: prefix,
+        keyCiphertext,
+      });
+    } catch {
+      // Pre-migrate DBs may lack key_ciphertext / brand_id.
+      await db.execute(sql`
+        INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, created_at)
+        VALUES (${id}, ${userId}, ${name}, ${hash}, ${prefix}, NOW())
+      `);
+    }
   }
 
-  return { id, raw, prefix, name, brandId: brandId ?? null };
+  return {
+    id,
+    raw,
+    prefix,
+    name,
+    brandId: brandId ?? null,
+    created: true,
+    recoverable: true,
+  };
+}
+
+/**
+ * Return the brand's latest API key (decrypting if stored), or mint one.
+ */
+export async function ensureDefaultBrandApiKey(
+  userId: string,
+  brandId: string,
+  name = "default",
+): Promise<CreatedApiKey> {
+  const existing = await db
+    .select({
+      id: apiKeys.id,
+      name: apiKeys.name,
+      keyPrefix: apiKeys.keyPrefix,
+      keyCiphertext: apiKeys.keyCiphertext,
+    })
+    .from(apiKeys)
+    .where(and(eq(apiKeys.brandId, brandId), eq(apiKeys.userId, userId)))
+    .orderBy(desc(apiKeys.createdAt))
+    .limit(1);
+
+  const row = existing[0];
+  if (row) {
+    let raw: string | null = null;
+    if (row.keyCiphertext) {
+      try {
+        raw = decryptApiKey(row.keyCiphertext);
+      } catch {
+        raw = null;
+      }
+    }
+    if (raw) {
+      return {
+        id: row.id,
+        raw,
+        prefix: row.keyPrefix,
+        name: row.name,
+        brandId,
+        created: false,
+        recoverable: true,
+      };
+    }
+    // Legacy row without recoverable ciphertext — mint a new key.
+  }
+
+  return createApiKey(userId, name, brandId);
+}
+
+/** Decrypt a specific key the user owns (brand-scoped). */
+export async function revealBrandApiKey(
+  userId: string,
+  brandId: string,
+  keyId: string,
+): Promise<CreatedApiKey | null> {
+  const rows = await db
+    .select({
+      id: apiKeys.id,
+      name: apiKeys.name,
+      keyPrefix: apiKeys.keyPrefix,
+      keyCiphertext: apiKeys.keyCiphertext,
+    })
+    .from(apiKeys)
+    .where(
+      and(
+        eq(apiKeys.id, keyId),
+        eq(apiKeys.brandId, brandId),
+        eq(apiKeys.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  const row = rows[0];
+  if (!row?.keyCiphertext) return null;
+
+  try {
+    const raw = decryptApiKey(row.keyCiphertext);
+    return {
+      id: row.id,
+      raw,
+      prefix: row.keyPrefix,
+      name: row.name,
+      brandId,
+      created: false,
+      recoverable: true,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function verifyApiKey(

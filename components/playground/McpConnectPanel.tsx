@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 type ClientId = "claude" | "cursor";
 type CopyKind = "url" | "config" | "key" | "desktop" | "cli";
@@ -99,6 +99,12 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  useEffect(() => {
+    setApiKey(null);
+    setKeyMeta(null);
+    setError(null);
+  }, [containerTag]);
+
   const isLocalhost = mcpUrl.includes("localhost");
   const keyOrPlaceholder = apiKey ?? "";
   const desktopConfig = claudeDesktopConfig(mcpUrl, keyOrPlaceholder);
@@ -115,7 +121,7 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
     }
   }
 
-  function generateKey() {
+  function generateKey(forceNew = false) {
     if (!containerTag.trim()) {
       setError("Set a containerTag above first.");
       return;
@@ -130,12 +136,16 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-          body: JSON.stringify({ containerTag: containerTag.trim() }),
+          body: JSON.stringify({
+            containerTag: containerTag.trim(),
+            forceNew,
+          }),
         });
         const data = (await res.json()) as {
           key?: string;
           brandId?: string;
           containerTag?: string;
+          created?: boolean;
           error?: string;
           detail?: string;
         };
@@ -177,21 +187,33 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
           <div>
             <p className="text-sm font-medium text-[var(--ink)]">API key</p>
             <p className="text-xs text-[var(--muted)]">
-              Brand-scoped · shown once · store it before leaving this page
+              Brand-scoped · encrypted at rest · reveal anytime
             </p>
           </div>
-          <button
-            type="button"
-            disabled={pending || !containerTag.trim()}
-            onClick={generateKey}
-            className="rounded border border-[var(--line)] bg-[var(--sheet)] px-3 py-2 text-sm font-medium text-[var(--ink)] hover:bg-[var(--bg)] disabled:opacity-50"
-          >
-            {pending
-              ? "Generating…"
-              : apiKey
-                ? "Generate new key"
-                : "Generate API key"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={pending || !containerTag.trim()}
+              onClick={() => generateKey(false)}
+              className="rounded border border-[var(--line)] bg-[var(--sheet)] px-3 py-2 text-sm font-medium text-[var(--ink)] hover:bg-[var(--bg)] disabled:opacity-50"
+            >
+              {pending
+                ? "Loading…"
+                : apiKey
+                  ? "Reveal key"
+                  : "Reveal / create key"}
+            </button>
+            {apiKey ? (
+              <button
+                type="button"
+                disabled={pending || !containerTag.trim()}
+                onClick={() => generateKey(true)}
+                className="rounded border border-[var(--line)] px-3 py-2 text-sm text-[var(--ink)] hover:bg-[var(--sheet)] disabled:opacity-50"
+              >
+                Generate new
+              </button>
+            ) : null}
+          </div>
         </div>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
@@ -218,7 +240,8 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
           </div>
         ) : (
           <p className="text-sm text-[var(--muted)]">
-            No key yet. Generate one to fill the Claude / Cursor snippets below.
+            Creating a brand auto-mints a key. Reveal it here to fill the
+            snippets below.
           </p>
         )}
       </div>

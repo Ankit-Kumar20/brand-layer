@@ -8,6 +8,10 @@ import {
   organizations,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import {
+  createApiKey,
+  type CreatedApiKey,
+} from "@/lib/auth-api-key";
 
 export type SessionUser = {
   id: string;
@@ -21,6 +25,10 @@ export type BrandRow = {
   slug: string;
   containerTag: string;
   organizationId: string;
+};
+
+export type BrandWithApiKey = BrandRow & {
+  apiKey: CreatedApiKey;
 };
 
 function slugify(value: string) {
@@ -137,12 +145,13 @@ export async function getBrandByContainerTagIfMember(
 /**
  * Resolve a brand the user can access by containerTag, or create one under
  * a personal playground org when the tag is free.
+ * New brands always get a brand-scoped API key (encrypted at rest).
  */
 export async function ensureBrandForContainerTag(
   userId: string,
   containerTag: string,
   opts?: { name?: string },
-): Promise<BrandRow> {
+): Promise<BrandRow | BrandWithApiKey> {
   const tag = containerTag.trim();
   if (!tag) {
     throw Response.json(
@@ -189,20 +198,23 @@ export async function ensureBrandForContainerTag(
     containerTag: tag,
   });
 
+  const apiKey = await createApiKey(userId, "default", brandId);
+
   return {
     id: brandId,
     name: brandName,
     slug,
     containerTag: tag,
     organizationId: orgId,
+    apiKey,
   };
 }
 
-/** Create a brand with a derived containerTag under the user's org. */
+/** Create a brand with a derived containerTag under the user's org (+ API key). */
 export async function createUserBrand(
   userId: string,
   input: { name: string; slug?: string; organizationId?: string },
-): Promise<BrandRow> {
+): Promise<BrandWithApiKey> {
   const name = input.name.trim();
   if (!name) {
     throw Response.json({ error: "name is required" }, { status: 400 });
@@ -256,11 +268,14 @@ export async function createUserBrand(
     containerTag,
   });
 
+  const apiKey = await createApiKey(userId, "default", brandId);
+
   return {
     id: brandId,
     name,
     slug: brandSlug,
     containerTag,
     organizationId,
+    apiKey,
   };
 }

@@ -22,6 +22,13 @@
       "when": 1785061912740,
       "tag": "0002_daffy_shinobi_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785519294216,
+      "tag": "0003_wise_human_cannonball",
+      "breakpoints": true
     }
   ]
 }

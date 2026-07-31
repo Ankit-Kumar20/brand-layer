@@ -1,13 +1,16 @@
-import { createApiKey } from "@/lib/auth-api-key";
+import {
+  createApiKey,
+  ensureDefaultBrandApiKey,
+} from "@/lib/auth-api-key";
 import {
   ensureBrandForContainerTag,
   requireUserSession,
 } from "@/lib/auth-session";
 
 /**
- * Mint a brand-scoped API key for a containerTag.
- * Requires Better Auth session. Creates brand+org when the tag is free.
- * Always persists to api_keys with brand_id set.
+ * Get or mint a brand-scoped API key for a containerTag.
+ * Requires Better Auth session. Creates brand+org (+ key) when the tag is free.
+ * Returns the recoverable raw key (encrypted at rest).
  */
 export async function POST(request: Request) {
   try {
@@ -16,6 +19,8 @@ export async function POST(request: Request) {
       containerTag?: string;
       name?: string;
       brandName?: string;
+      /** When true, always mint a new key instead of revealing the existing one. */
+      forceNew?: boolean;
     };
 
     const containerTag = body.containerTag?.trim();
@@ -26,16 +31,26 @@ export async function POST(request: Request) {
       );
     }
 
-    const brand = await ensureBrandForContainerTag(user.id, containerTag, {
-      name: body.brandName,
-    });
+    const brandResult = await ensureBrandForContainerTag(
+      user.id,
+      containerTag,
+      { name: body.brandName },
+    );
 
     const keyName =
       typeof body.name === "string" && body.name.trim()
         ? body.name.trim()
         : `playground-${new Date().toISOString().slice(0, 10)}`;
 
-    const key = await createApiKey(user.id, keyName, brand.id);
+    let key;
+    if ("apiKey" in brandResult && brandResult.apiKey && !body.forceNew) {
+      // Brand was just created with a default key.
+      key = brandResult.apiKey;
+    } else if (body.forceNew) {
+      key = await createApiKey(user.id, keyName, brandResult.id);
+    } else {
+      key = await ensureDefaultBrandApiKey(user.id, brandResult.id, keyName);
+    }
 
     return Response.json({
       id: key.id,
@@ -43,9 +58,13 @@ export async function POST(request: Request) {
       key: key.raw,
       prefix: key.prefix,
       userId: user.id,
-      brandId: brand.id,
-      containerTag: brand.containerTag,
-      warning: "Store this key now; it will not be shown again.",
+      brandId: brandResult.id,
+      containerTag: brandResult.containerTag,
+      created: key.created,
+      recoverable: key.recoverable,
+      warning: key.created
+        ? "Key is encrypted at rest and can be revealed again from the playground."
+        : "Revealed existing key from encrypted storage.",
     });
   } catch (err) {
     if (err instanceof Response) return err;

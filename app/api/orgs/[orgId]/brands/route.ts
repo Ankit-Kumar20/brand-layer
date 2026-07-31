@@ -1,7 +1,12 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db";
-import { brands, organizations } from "@/db/schema";
+import {
+  brands,
+  organizationMembers,
+  organizations,
+} from "@/db/schema";
+import { createApiKey } from "@/lib/auth-api-key";
 
 function slugify(value: string) {
   return value
@@ -54,12 +59,33 @@ export async function POST(
       containerTag,
     });
 
+    const owner = await db.query.organizationMembers.findFirst({
+      where: and(
+        eq(organizationMembers.organizationId, orgId),
+        eq(organizationMembers.role, "owner"),
+      ),
+    });
+
+    let apiKey = null;
+    if (owner) {
+      const key = await createApiKey(owner.userId, "default", id);
+      apiKey = {
+        id: key.id,
+        name: key.name,
+        key: key.raw,
+        prefix: key.prefix,
+        created: key.created,
+        recoverable: true,
+      };
+    }
+
     return Response.json({
       id,
       organizationId: orgId,
       name,
       slug,
       containerTag,
+      apiKey,
     });
   } catch (err) {
     return Response.json(
@@ -78,15 +104,14 @@ export async function GET(
 ) {
   try {
     const { orgId } = await context.params;
-    const rows = await db
-      .select()
-      .from(brands)
-      .where(eq(brands.organizationId, orgId));
+    const rows = await db.query.brands.findMany({
+      where: eq(brands.organizationId, orgId),
+    });
     return Response.json({ brands: rows });
   } catch (err) {
     return Response.json(
       {
-        error: "Brands unavailable",
+        error: "Failed to list brands",
         detail: err instanceof Error ? err.message : String(err),
       },
       { status: 500 },

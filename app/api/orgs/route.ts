@@ -6,6 +6,7 @@ import {
   organizationMembers,
   organizations,
 } from "@/db/schema";
+import { createApiKey } from "@/lib/auth-api-key";
 import { listUserBrands, requireUserSession } from "@/lib/auth-session";
 
 function slugify(value: string) {
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
     });
 
     let brand = null;
+    let apiKey = null;
     if (body.brandName?.trim() || body.brandSlug?.trim()) {
       const brandName = body.brandName?.trim() || name;
       const brandSlug = body.brandSlug?.trim() || slugify(brandName);
@@ -64,12 +66,22 @@ export async function POST(request: Request) {
         slug: brandSlug,
         containerTag,
       });
+      const key = await createApiKey(user.id, "default", brandId);
       brand = { id: brandId, name: brandName, slug: brandSlug, containerTag };
+      apiKey = {
+        id: key.id,
+        name: key.name,
+        key: key.raw,
+        prefix: key.prefix,
+        created: key.created,
+        recoverable: true,
+      };
     }
 
     return Response.json({
       organization: { id: orgId, name, slug: orgSlug },
       brand,
+      apiKey,
     });
   } catch (err) {
     if (err instanceof Response) return err;

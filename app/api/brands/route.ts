@@ -1,4 +1,8 @@
-import { createUserBrand, listUserBrands, requireUserSession } from "@/lib/auth-session";
+import {
+  createUserBrand,
+  listUserBrands,
+  requireUserSession,
+} from "@/lib/auth-session";
 
 /** List brands the signed-in user can access. */
 export async function GET(request: Request) {
@@ -18,7 +22,7 @@ export async function GET(request: Request) {
   }
 }
 
-/** Create a brand (and org if needed) for the signed-in user. */
+/** Create a brand (and org if needed) + default encrypted API key. */
 export async function POST(request: Request) {
   try {
     const user = await requireUserSession(request);
@@ -32,13 +36,23 @@ export async function POST(request: Request) {
       return Response.json({ error: "name is required" }, { status: 400 });
     }
 
-    const brand = await createUserBrand(user.id, {
+    const { apiKey, ...brand } = await createUserBrand(user.id, {
       name: body.name,
       slug: body.slug,
       organizationId: body.organizationId,
     });
 
-    return Response.json({ brand });
+    return Response.json({
+      brand,
+      apiKey: {
+        id: apiKey.id,
+        name: apiKey.name,
+        key: apiKey.raw,
+        prefix: apiKey.prefix,
+        created: apiKey.created,
+        recoverable: true,
+      },
+    });
   } catch (err) {
     if (err instanceof Response) return err;
     return Response.json(

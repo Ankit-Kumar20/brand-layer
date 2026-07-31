@@ -164,6 +164,8 @@ export const apiKeys = pgTable(
     name: text("name").notNull().default("default"),
     keyHash: text("key_hash").notNull(),
     keyPrefix: text("key_prefix").notNull(),
+    /** AES-GCM ciphertext of the raw key (recoverable). Null for legacy rows. */
+    keyCiphertext: text("key_ciphertext"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [

@@ -37,6 +37,7 @@ export function Playground({ user }: PlaygroundProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [newBrandName, setNewBrandName] = useState("");
   const [pending, startTransition] = useTransition();
+  const [createdApiKey, setCreatedApiKey] = useState<string | null>(null);
 
   const selected = brands.find((b) => b.id === brandId) ?? null;
 
@@ -96,6 +97,7 @@ export function Playground({ user }: PlaygroundProps) {
     if (!brand) return;
     setBrandId(brand.id);
     setContainerTag(brand.containerTag);
+    setCreatedApiKey(null);
     saveBrandId(brand.id);
     saveContainerTag(brand.containerTag);
   }
@@ -104,6 +106,7 @@ export function Playground({ user }: PlaygroundProps) {
     const name = newBrandName.trim();
     if (!name) return;
     setLoadError(null);
+    setCreatedApiKey(null);
     startTransition(async () => {
       try {
         const res = await fetch("/api/brands", {
@@ -117,6 +120,7 @@ export function Playground({ user }: PlaygroundProps) {
         });
         const data = (await res.json()) as {
           brand?: PlaygroundBrand;
+          apiKey?: { key?: string };
           error?: string;
           detail?: string;
         };
@@ -131,6 +135,7 @@ export function Playground({ user }: PlaygroundProps) {
         saveBrandId(data.brand.id);
         saveContainerTag(data.brand.containerTag);
         setNewBrandName("");
+        if (data.apiKey?.key) setCreatedApiKey(data.apiKey.key);
       } catch (err) {
         setLoadError(err instanceof Error ? err.message : "Create failed");
       }
@@ -242,6 +247,20 @@ export function Playground({ user }: PlaygroundProps) {
               {pending ? "Creating…" : "Create"}
             </button>
           </div>
+
+          {createdApiKey ? (
+            <div className="space-y-1.5 rounded border border-[var(--line)] bg-[var(--bg)] p-3">
+              <p className="text-sm font-medium text-[var(--ink)]">
+                API key created
+              </p>
+              <p className="text-xs text-[var(--muted)]">
+                Encrypted at rest — you can reveal it again from Connect MCP.
+              </p>
+              <code className="block break-all font-mono text-xs text-[var(--ink)]">
+                {createdApiKey}
+              </code>
+            </div>
+          ) : null}
 
           {loadError ? (
             <p className="text-sm text-red-600" role="alert">
