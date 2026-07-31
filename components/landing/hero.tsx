@@ -35,7 +35,7 @@ export function Hero({ signedIn = false }: HeroProps) {
                 className={`${heroCtaClassName} w-full sm:w-auto`}
                 size="lg"
               >
-                <Link href="/playground">Open workspace</Link>
+                <Link href="/workspace">Open workspace</Link>
               </Button>
             ) : (
               <AuthModal>

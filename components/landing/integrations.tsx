@@ -34,26 +34,58 @@ function BrandMark({
 
 type ToolId = "claude" | "cursor" | "chatgpt";
 
-type IntegrationId = ToolId | "codex" | "openclaw" | "hermes";
+export type HomepageToolId = ToolId | "codex" | "openclaw" | "hermes";
+
+type IntegrationId = HomepageToolId;
 
 type ToolDef =
-  | { name: string; kind: "simple"; icon: SimpleIcon }
-  | { name: string; kind: "file"; src: string };
+  | { name: string; href: string; kind: "simple"; icon: SimpleIcon }
+  | { name: string; href: string; kind: "file"; src: string };
 
 const tools: Record<ToolId, ToolDef> = {
-  claude: { name: "Claude", kind: "simple", icon: siClaude },
-  cursor: { name: "Cursor", kind: "simple", icon: siCursor },
-  chatgpt: { name: "ChatGPT", kind: "file", src: "/icons/openai.svg" },
+  claude: {
+    name: "Claude",
+    href: "https://claude.ai",
+    kind: "simple",
+    icon: siClaude,
+  },
+  cursor: {
+    name: "Cursor",
+    href: "https://cursor.com",
+    kind: "simple",
+    icon: siCursor,
+  },
+  chatgpt: {
+    name: "ChatGPT",
+    href: "https://chatgpt.com",
+    kind: "file",
+    src: "/icons/openai.svg",
+  },
 };
 
 const integrations: Record<IntegrationId, ToolDef> = {
   ...tools,
-  codex: { name: "Codex", kind: "file", src: "/icons/codex.svg" },
-  openclaw: { name: "OpenClaw", kind: "file", src: "/icons/openclaw.svg" },
-  hermes: { name: "Hermes Agent", kind: "file", src: "/icons/hermes.svg" },
+  codex: {
+    name: "Codex",
+    href: "https://openai.com/codex",
+    kind: "file",
+    src: "/icons/codex.svg",
+  },
+  openclaw: {
+    name: "OpenClaw",
+    href: "https://openclaw.ai",
+    kind: "file",
+    src: "/icons/openclaw.svg",
+  },
+  hermes: {
+    name: "Hermes Agent",
+    href: "https://hermes-agent.nousresearch.com",
+    kind: "file",
+    src: "/icons/hermes.svg",
+  },
 };
 
-const integrationOrder: IntegrationId[] = [
+export const homepageToolIds: HomepageToolId[] = [
   "claude",
   "cursor",
   "chatgpt",
@@ -61,6 +93,14 @@ const integrationOrder: IntegrationId[] = [
   "openclaw",
   "hermes",
 ];
+
+export const homepageTools = homepageToolIds.map((id) => ({
+  id,
+  name: integrations[id].name,
+  href: integrations[id].href,
+}));
+
+const integrationOrder: IntegrationId[] = homepageToolIds;
 
 /** Icon only - put the label in surrounding copy. */
 export function ToolIcon({ id }: { id: ToolId }) {
@@ -94,11 +134,17 @@ export function ToolName({ id }: { id: ToolId }) {
   );
 }
 
-function IntegrationMark({ id }: { id: IntegrationId }) {
+export function HomepageToolIcon({
+  id,
+  className = "size-5 shrink-0",
+}: {
+  id: HomepageToolId;
+  className?: string;
+}) {
   const tool = integrations[id];
 
   if (tool.kind === "simple") {
-    return <BrandMark className="size-5 shrink-0" icon={tool.icon} />;
+    return <BrandMark className={className} icon={tool.icon} />;
   }
 
   return (
@@ -106,12 +152,16 @@ function IntegrationMark({ id }: { id: IntegrationId }) {
     <img
       alt=""
       aria-hidden
-      className="size-5 shrink-0"
+      className={className}
       height={20}
       src={tool.src}
       width={20}
     />
   );
+}
+
+function IntegrationMark({ id }: { id: IntegrationId }) {
+  return <HomepageToolIcon id={id} />;
 }
 
 export function Integrations() {
@@ -123,8 +173,15 @@ export function Integrations() {
           const tool = integrations[id];
           return (
             <li key={id}>
-              <span className="sr-only">{tool.name}</span>
-              <IntegrationMark id={id} />
+              <a
+                aria-label={tool.name}
+                className="cursor-pointer"
+                href={tool.href}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <IntegrationMark id={id} />
+              </a>
             </li>
           );
         })}

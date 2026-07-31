@@ -19,7 +19,7 @@ const faqs = [
   {
     question: "How does pricing work?",
     answer:
-      "BYOK is $19/mo after a 14-day free trial on your first brand (generation on your keys). Starter $20/mo (100 credits). Pro $50/mo (350 credits). 10% off yearly.",
+      "Two plans: BYOK ($19/mo after a 14-day trial) runs generation on your keys. Pro is hosted — slide to pick monthly credits (50 to 1,000) and pay for that pack. 10% off yearly.",
   },
   {
     question: "Can I have multiple brands?",

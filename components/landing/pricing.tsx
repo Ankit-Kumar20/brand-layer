@@ -17,50 +17,54 @@ type Feature = {
 
 const ANNUAL_DISCOUNT = 0.1;
 
-const plans = [
+const CREDIT_PACKS = [
   {
-    id: "byok",
-    name: "BYOK",
-    tagline: "Your keys.",
-    monthlyPrice: 19,
-    cta: "Start free trial",
-    variant: "default" as const,
-    features: [
-      { label: "14-day free trial", included: true },
-      { label: "Generation on your keys", included: true },
-      { label: "Multi-brand workspaces", included: true },
-      { label: "Team seats included", included: true },
-    ] satisfies Feature[],
+    credits: 50,
+    monthlyPrice: 12,
+    estimate: "~20 generations",
   },
   {
-    id: "starter",
-    name: "Starter",
-    tagline: "Get started.",
+    credits: 100,
     monthlyPrice: 20,
-    cta: "Get Starter",
-    variant: "secondary" as const,
-    features: [
-      { label: "100 credits/mo", included: true },
-      { label: "Multi-brand workspaces", included: true },
-      { label: "Hosted generation", included: true },
-      { label: "No team seats", included: false },
-    ] satisfies Feature[],
+    estimate: "~40 generations",
   },
   {
-    id: "pro",
-    name: "Pro",
-    tagline: "Ship weekly.",
+    credits: 200,
+    monthlyPrice: 35,
+    estimate: "~80 generations",
+  },
+  {
+    credits: 350,
     monthlyPrice: 50,
-    cta: "Get Pro",
-    variant: "secondary" as const,
-    features: [
-      { label: "350 credits/mo", included: true },
-      { label: "Multi-brand workspaces", included: true },
-      { label: "Team seats included", included: true },
-      { label: "Priority support", included: true },
-    ] satisfies Feature[],
+    estimate: "~140 generations",
+  },
+  {
+    credits: 500,
+    monthlyPrice: 70,
+    estimate: "~200 generations",
+  },
+  {
+    credits: 1000,
+    monthlyPrice: 120,
+    estimate: "~400 generations",
   },
 ] as const;
+
+const DEFAULT_PACK_INDEX = 3;
+
+const byokFeatures = [
+  { label: "14-day free trial", included: true },
+  { label: "Generation on your keys", included: true },
+  { label: "Multi-brand workspaces", included: true },
+  { label: "Team seats included", included: true },
+] satisfies Feature[];
+
+const proFeatures = [
+  { label: "Hosted generation", included: true },
+  { label: "Multi-brand workspaces", included: true },
+  { label: "Team seats included", included: true },
+  { label: "Priority support", included: true },
+] satisfies Feature[];
 
 function FeatureIcon({ included }: { included: boolean }) {
   if (included) {
@@ -96,8 +100,75 @@ function FeatureIcon({ included }: { included: boolean }) {
   );
 }
 
+function PriceBlock({
+  monthlyPrice,
+  billing,
+  footnote,
+}: {
+  monthlyPrice: number;
+  billing: Billing;
+  footnote: string;
+}) {
+  const showAnnual = billing === "annual";
+  const displayPrice = showAnnual
+    ? Math.round(monthlyPrice * (1 - ANNUAL_DISCOUNT))
+    : monthlyPrice;
+
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="font-display text-5xl tracking-[-1px] lg:text-6xl">
+          ${displayPrice}
+        </span>
+        <span className="text-body text-muted-foreground">/mo</span>
+        {showAnnual ? (
+          <span className="text-body text-muted-foreground line-through">
+            ${monthlyPrice}
+          </span>
+        ) : null}
+      </div>
+      <p
+        className={cn(
+          "text-body",
+          showAnnual ? "text-primary" : "text-muted-foreground",
+        )}
+      >
+        {footnote}
+      </p>
+    </div>
+  );
+}
+
+function FeatureList({ features }: { features: Feature[] }) {
+  return (
+    <ul className="flex flex-col gap-3">
+      {features.map((feature) => (
+        <li
+          className={cn(
+            "text-body flex items-start gap-2.5",
+            feature.included
+              ? "text-foreground/90"
+              : "text-muted-foreground",
+          )}
+          key={feature.label}
+        >
+          <FeatureIcon included={feature.included} />
+          <span>{feature.label}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function Pricing() {
   const [billing, setBilling] = useState<Billing>("annual");
+  const [packIndex, setPackIndex] = useState(DEFAULT_PACK_INDEX);
+  const pack = CREDIT_PACKS[packIndex] ?? CREDIT_PACKS[DEFAULT_PACK_INDEX];
+  const showAnnual = billing === "annual";
+  const fillPercent =
+    CREDIT_PACKS.length > 1
+      ? (packIndex / (CREDIT_PACKS.length - 1)) * 100
+      : 0;
 
   return (
     <section className="relative py-12 sm:py-16 md:py-24" id="pricing">
@@ -105,7 +176,7 @@ export function Pricing() {
         <div className="mb-10 flex flex-col gap-6 md:mb-12 md:flex-row md:items-end md:justify-between">
           <div className="space-y-3">
             <p className="text-label text-primary">Pricing</p>
-            <h2 className="text-title text-balance">Simple plans</h2>
+            <h2 className="text-title text-balance">Two plans</h2>
           </div>
 
           <div
@@ -131,93 +202,131 @@ export function Pricing() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 border border-border md:grid-cols-3">
-          {plans.map((plan, index) => {
-            const showAnnual = billing === "annual";
-            const displayPrice = showAnnual
-              ? Math.round(plan.monthlyPrice * (1 - ANNUAL_DISCOUNT))
-              : plan.monthlyPrice;
-            const isByok = plan.id === "byok";
+        <div className="grid grid-cols-1 border border-border md:grid-cols-2">
+          {/* BYOK */}
+          <div className="flex flex-col gap-8 border-b border-border p-5 sm:p-6 md:border-r md:border-b-0 md:p-8">
+            <div className="flex flex-1 flex-col gap-6">
+              <div className="space-y-4">
+                <p className="text-label text-muted-foreground">BYOK</p>
+                <PriceBlock
+                  billing={billing}
+                  footnote={
+                    showAnnual
+                      ? "14-day trial · then yearly · 10% off"
+                      : "14-day free trial · first brand"
+                  }
+                  monthlyPrice={19}
+                />
+                <p className="text-body text-foreground">Your keys.</p>
+              </div>
+              <FeatureList features={byokFeatures} />
+            </div>
 
-            return (
-              <div
-                className={cn(
-                  "flex flex-col gap-8 p-5 sm:p-6 md:p-8",
-                  index < plans.length - 1 &&
-                    "border-b border-border md:border-r md:border-b-0",
-                )}
-                key={plan.id}
-              >
-                <div className="flex flex-1 flex-col gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <p className="text-label text-muted-foreground">
-                        {plan.name}
-                      </p>
-                    </div>
+            <AuthModal>
+              <Button className="h-11 w-full font-medium" variant="default">
+                Start free trial
+              </Button>
+            </AuthModal>
+          </div>
 
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                        <span className="font-display text-5xl tracking-[-1px] lg:text-6xl">
-                          ${displayPrice}
-                        </span>
-                        <span className="text-body text-muted-foreground">
-                          /mo
-                        </span>
-                        {showAnnual ? (
-                          <span className="text-body text-muted-foreground line-through">
-                            ${plan.monthlyPrice}
-                          </span>
-                        ) : null}
-                      </div>
-                      <p
-                        className={cn(
-                          "text-body",
-                          showAnnual ? "text-primary" : "text-muted-foreground",
-                        )}
-                      >
-                        {isByok
-                          ? showAnnual
-                            ? "14-day trial · then yearly · 10% off"
-                            : "14-day free trial · first brand"
-                          : showAnnual
-                            ? "Billed yearly · 10% off"
-                            : "Billed monthly"}
-                      </p>
-                    </div>
+          {/* Pro */}
+          <div className="flex flex-col gap-8 p-5 sm:p-6 md:p-8">
+            <div className="flex flex-1 flex-col gap-6">
+              <div className="space-y-4">
+                <p className="text-label text-muted-foreground">Pro</p>
+                <PriceBlock
+                  billing={billing}
+                  footnote={
+                    showAnnual
+                      ? "Billed yearly · 10% off"
+                      : "Billed monthly"
+                  }
+                  monthlyPrice={pack.monthlyPrice}
+                />
+                <p className="text-body text-foreground">
+                  Pick the credits you need.
+                </p>
 
-                    <p className="text-body text-foreground">{plan.tagline}</p>
+                <div className="relative pt-1 pb-7">
+                  <div className="relative mx-2 h-5">
+                    <div
+                      aria-hidden
+                      className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 bg-background-200"
+                    />
+                    <div
+                      aria-hidden
+                      className="absolute top-1/2 left-0 h-1.5 -translate-y-1/2 bg-primary transition-[width] duration-300 ease-[var(--ease-swift)]"
+                      style={{ width: `${fillPercent}%` }}
+                    />
+                    <div
+                      aria-hidden
+                      className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded border border-border bg-sheet transition-[left] duration-300 ease-[var(--ease-swift)]"
+                      style={{ left: `${fillPercent}%` }}
+                    />
+                    <input
+                      aria-label="Credits per month"
+                      aria-valuemax={CREDIT_PACKS.length - 1}
+                      aria-valuemin={0}
+                      aria-valuenow={packIndex}
+                      aria-valuetext={`${pack.credits} credits`}
+                      className="absolute inset-0 z-10 w-full cursor-pointer opacity-0"
+                      max={CREDIT_PACKS.length - 1}
+                      min={0}
+                      onChange={(event) =>
+                        setPackIndex(Number(event.target.value))
+                      }
+                      step={1}
+                      type="range"
+                      value={packIndex}
+                    />
                   </div>
 
-                  <ul className="flex flex-col gap-3">
-                    {plan.features.map((feature) => (
-                      <li
-                        className={cn(
-                          "text-body flex items-start gap-2.5",
-                          feature.included
-                            ? "text-foreground/90"
-                            : "text-muted-foreground",
-                        )}
-                        key={feature.label}
-                      >
-                        <FeatureIcon included={feature.included} />
-                        <span>{feature.label}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="pointer-events-none absolute inset-x-2 bottom-0 h-5">
+                    {CREDIT_PACKS.map((item, index) => {
+                      const stop =
+                        CREDIT_PACKS.length > 1
+                          ? (index / (CREDIT_PACKS.length - 1)) * 100
+                          : 0;
+                      return (
+                        <button
+                          className={cn(
+                            "pointer-events-auto absolute top-0 -translate-x-1/2 cursor-pointer text-label transition-colors duration-300 ease-[var(--ease-swift)]",
+                            index === packIndex
+                              ? "text-primary"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                          key={item.credits}
+                          onClick={() => setPackIndex(index)}
+                          style={{ left: `${stop}%` }}
+                          type="button"
+                        >
+                          {item.credits >= 1000
+                            ? `${item.credits / 1000}k`
+                            : item.credits}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-
-                <AuthModal>
-                  <Button
-                    className="h-11 w-full font-medium"
-                    variant={plan.variant}
-                  >
-                    {plan.cta}
-                  </Button>
-                </AuthModal>
               </div>
-            );
-          })}
+
+              <FeatureList
+                features={[
+                  {
+                    label: `${pack.credits.toLocaleString()} credits/mo`,
+                    included: true,
+                  },
+                  ...proFeatures,
+                ]}
+              />
+            </div>
+
+            <AuthModal>
+              <Button className="h-11 w-full font-medium" variant="secondary">
+                Get Pro
+              </Button>
+            </AuthModal>
+          </div>
         </div>
 
         <p className="mt-6 text-body text-muted-foreground">

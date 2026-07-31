@@ -1,7 +1,7 @@
 "use client";
 
 import { Slot } from "@radix-ui/react-slot";
-import { Loader2 } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -32,7 +32,7 @@ function ProviderIcon({
 }) {
   if (loading) {
     return (
-      <Loader2
+      <CircleNotch
         aria-hidden
         className="size-4 animate-spin !text-primary"
       />
@@ -98,7 +98,7 @@ function AuthModalInner({ children }: AuthModalProps) {
     setLoadingProvider(provider);
 
     try {
-      const next = searchParams.get("next") || "/playground";
+      const next = searchParams.get("next") || "/workspace";
       const result = await authClient.signIn.social({
         provider,
         callbackURL: next,

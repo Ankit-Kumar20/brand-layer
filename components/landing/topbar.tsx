@@ -40,7 +40,6 @@ export function TopBar({
   const [menuOpen, setMenuOpen] = useState(false);
 
   const avatarSrc = user?.image || userImage;
-  const userInitial = (user?.name || user?.email || "U")[0]?.toUpperCase() || "U";
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -69,7 +68,7 @@ export function TopBar({
       <div className="sheet relative">
         <div className="sheet-pad relative flex h-14 items-center justify-between gap-3 md:h-16">
           <BrandLogo
-            href={signedIn ? "/app" : "/"}
+            href={signedIn ? "/workspace" : "/"}
             markOnly={hideBrandName}
             size="md"
           />
@@ -92,31 +91,41 @@ export function TopBar({
 
           <div className="flex shrink-0 items-center gap-2">
             {signedIn || user ? (
-              <Button
-                asChild
-                size="icon"
-                variant="ghost"
-                className="size-8 md:size-9 rounded shrink-0 overflow-hidden border-none p-0 transition-colors duration-200 focus-visible:ring-primary"
-                title={user?.name || user?.email || "Profile"}
-              >
-                <Link
-                  href={
-                    actionNav === "profile" ? "/app/profile" : "/playground"
-                  }
+              actionNav === "profile" ? (
+                <Button
+                  asChild
+                  size="icon"
+                  variant="ghost"
+                  className="size-8 md:size-9 shrink-0 overflow-hidden rounded border-none bg-background-100 p-0 text-foreground transition-colors duration-200 hover:bg-background-200 focus-visible:ring-primary"
+                  title={user?.name || user?.email || "Profile"}
                 >
-                  {avatarSrc ? (
-                    <img
-                      src={avatarSrc}
-                      alt={user?.name || "User profile"}
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex size-full items-center justify-center font-mono text-xs font-semibold uppercase text-foreground bg-background-100">
-                      {userInitial}
-                    </span>
-                  )}
-                </Link>
-              </Button>
+                  <Link href="/app/profile">
+                    {avatarSrc ? (
+                      <img
+                        src={avatarSrc}
+                        alt={user?.name || "User profile"}
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex size-full items-center justify-center">
+                        <svg
+                          aria-hidden
+                          className="size-4"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z" />
+                          <path d="M4 20.4c0-3.5 3.6-5.9 8-5.9s8 2.4 8 5.9V21H4v-.6Z" />
+                        </svg>
+                      </span>
+                    )}
+                  </Link>
+                </Button>
+              ) : (
+                <Button asChild size="sm">
+                  <Link href="/workspace">Workspace</Link>
+                </Button>
+              )
             ) : (
               <AuthModal>
                 <Button size="sm">Sign in</Button>
@@ -170,10 +179,10 @@ export function TopBar({
                 >
                   <Link
                     href={
-                      actionNav === "profile" ? "/app/profile" : "/playground"
+                      actionNav === "profile" ? "/app/profile" : "/workspace"
                     }
                   >
-                    {actionNav === "profile" ? "Profile" : "Playground"}
+                    {actionNav === "profile" ? "Profile" : "Workspace"}
                   </Link>
                 </Button>
               </li>

@@ -280,7 +280,7 @@ export function HeroIllustrationLayers() {
 
       <button
         aria-label="Replay animation"
-        className="absolute right-2 bottom-2 inline-flex size-8 items-center justify-center text-muted-foreground opacity-100 transition-[opacity,color] duration-300 ease-[var(--ease-swift)] hover:text-foreground focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+        className="absolute right-2 bottom-2 inline-flex size-8 cursor-pointer items-center justify-center text-muted-foreground opacity-100 transition-[opacity,color] duration-300 ease-[var(--ease-swift)] hover:text-foreground focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
         onClick={() => setPlayId((id) => id + 1)}
         type="button"
       >
