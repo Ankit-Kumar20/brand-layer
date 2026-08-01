@@ -90,6 +90,79 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+/** Better Auth MCP / OIDC dynamic clients (ChatGPT, Claude, etc.). */
+export const oauthApplication = pgTable(
+  "oauth_application",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    icon: text("icon"),
+    metadata: text("metadata"),
+    clientId: text("client_id").notNull().unique(),
+    clientSecret: text("client_secret"),
+    redirectUrls: text("redirect_urls").notNull(),
+    type: text("type").notNull(),
+    disabled: boolean("disabled").default(false),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    authenticationScheme: text("authentication_scheme"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index("oauth_application_userId_idx").on(table.userId)],
+);
+
+export const oauthAccessToken = pgTable(
+  "oauth_access_token",
+  {
+    id: text("id").primaryKey(),
+    accessToken: text("access_token").notNull().unique(),
+    refreshToken: text("refresh_token").notNull().unique(),
+    accessTokenExpiresAt: timestamp("access_token_expires_at").notNull(),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at").notNull(),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => oauthApplication.clientId, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    scopes: text("scopes").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("oauth_access_token_clientId_idx").on(table.clientId),
+    index("oauth_access_token_userId_idx").on(table.userId),
+  ],
+);
+
+export const oauthConsent = pgTable(
+  "oauth_consent",
+  {
+    id: text("id").primaryKey(),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => oauthApplication.clientId, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    scopes: text("scopes").notNull(),
+    consentGiven: boolean("consent_given").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("oauth_consent_clientId_idx").on(table.clientId),
+    index("oauth_consent_userId_idx").on(table.userId),
+  ],
+);
+
 export const brands = pgTable(
   "brands",
   {
@@ -113,6 +186,37 @@ export const brands = pgTable(
       table.userId,
       table.brandTag,
     ),
+  ],
+);
+
+/**
+ * Brand chosen during MCP OAuth consent (ChatGPT / Claude connectors).
+ * Keyed by user + OAuth client so reconnects keep the same brand.
+ */
+export const mcpOauthBrand = pgTable(
+  "mcp_oauth_brand",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    clientId: text("client_id").notNull(),
+    brandId: text("brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+    brandTag: text("brand_tag").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("mcp_oauth_brand_user_client_uidx").on(
+      table.userId,
+      table.clientId,
+    ),
+    index("mcp_oauth_brand_userId_idx").on(table.userId),
   ],
 );
 
@@ -330,6 +434,58 @@ export const userRelations = relations(user, ({ many }) => ({
   documents: many(documents),
   memories: many(memories),
   brands: many(brands),
+  oauthApplications: many(oauthApplication),
+  oauthAccessTokens: many(oauthAccessToken),
+  oauthConsents: many(oauthConsent),
+  mcpOauthBrands: many(mcpOauthBrand),
+}));
+
+export const oauthApplicationRelations = relations(
+  oauthApplication,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [oauthApplication.userId],
+      references: [user.id],
+    }),
+    accessTokens: many(oauthAccessToken),
+    consents: many(oauthConsent),
+  }),
+);
+
+export const oauthAccessTokenRelations = relations(
+  oauthAccessToken,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [oauthAccessToken.userId],
+      references: [user.id],
+    }),
+    application: one(oauthApplication, {
+      fields: [oauthAccessToken.clientId],
+      references: [oauthApplication.clientId],
+    }),
+  }),
+);
+
+export const oauthConsentRelations = relations(oauthConsent, ({ one }) => ({
+  user: one(user, {
+    fields: [oauthConsent.userId],
+    references: [user.id],
+  }),
+  application: one(oauthApplication, {
+    fields: [oauthConsent.clientId],
+    references: [oauthApplication.clientId],
+  }),
+}));
+
+export const mcpOauthBrandRelations = relations(mcpOauthBrand, ({ one }) => ({
+  user: one(user, {
+    fields: [mcpOauthBrand.userId],
+    references: [user.id],
+  }),
+  brand: one(brands, {
+    fields: [mcpOauthBrand.brandId],
+    references: [brands.id],
+  }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -352,6 +508,7 @@ export const brandsRelations = relations(brands, ({ one, many }) => ({
     references: [user.id],
   }),
   apiKeys: many(apiKeys),
+  mcpOauthBrands: many(mcpOauthBrand),
 }));
 
 export const apiKeysRelations = relations(apiKeys, ({ one }) => ({

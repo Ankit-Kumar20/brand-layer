@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react";
 
-type ClientId = "claude" | "cursor";
+type ClientId = "claude" | "cursor" | "chatgpt";
 type CopyKind = "url" | "config" | "key" | "desktop" | "cli";
 
 const clients: { id: ClientId; label: string }[] = [
   { id: "claude", label: "Claude" },
   { id: "cursor", label: "Cursor" },
+  { id: "chatgpt", label: "ChatGPT" },
 ];
 
 function sharedConfig(url: string, apiKey: string) {
@@ -362,15 +363,14 @@ export function McpConnectPanel({ brandTag }: { brandTag: string }) {
               <p className="text-sm leading-relaxed text-[var(--muted)]">
                 Settings → Connectors → Add custom connector → paste a{" "}
                 <strong className="font-medium text-[var(--ink)]">public</strong>{" "}
-                MCP URL. If you see Request headers (beta), set{" "}
+                MCP URL. Prefer OAuth when offered (same flow as ChatGPT). If
+                you see Request headers (beta), you can also set{" "}
                 <code className="font-mono text-[var(--ink)]">Authorization</code>{" "}
                 to{" "}
                 <code className="font-mono text-[var(--ink)]">
                   Bearer sm_…
-                </code>{" "}
-                (include the word Bearer). If you only see OAuth fields, use
-                Desktop or Claude Code instead — desin is API-key auth, not OAuth
-                yet.
+                </code>
+                .
               </p>
             </li>
           </ol>
@@ -397,6 +397,72 @@ export function McpConnectPanel({ brandTag }: { brandTag: string }) {
             <code className="font-mono text-[var(--ink)]">bun dev</code> is
             serving{" "}
             <code className="font-mono text-[var(--ink)]">/api/mcp</code>.
+          </p>
+        </div>
+      ) : active === "chatgpt" ? (
+        <div className="space-y-8">
+          <ol className="space-y-5">
+            <li className="space-y-1">
+              <p className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
+                01
+              </p>
+              <p className="text-sm font-medium text-[var(--ink)]">
+                Public HTTPS URL
+              </p>
+              <p className="text-sm leading-relaxed text-[var(--muted)]">
+                ChatGPT only reaches remote MCP servers. Use your production{" "}
+                <code className="font-mono text-[var(--ink)]">/api/mcp</code>{" "}
+                URL (or tunnel localhost). No API key header — OAuth only.
+              </p>
+            </li>
+            <li className="space-y-1">
+              <p className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
+                02
+              </p>
+              <p className="text-sm font-medium text-[var(--ink)]">
+                Enable Developer mode
+              </p>
+              <p className="text-sm leading-relaxed text-[var(--muted)]">
+                ChatGPT → Settings → Security and login → Developer mode. Then
+                create an app / custom connector and paste the URL below.
+              </p>
+            </li>
+            <li className="space-y-1">
+              <p className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
+                03
+              </p>
+              <p className="text-sm font-medium text-[var(--ink)]">
+                Complete OAuth
+              </p>
+              <p className="text-sm leading-relaxed text-[var(--muted)]">
+                Choose OAuth, sign in to desin, and pick a brand if prompted.
+                Then ask ChatGPT to call{" "}
+                <code className="font-mono text-[var(--ink)]">whoAmI</code> or{" "}
+                <code className="font-mono text-[var(--ink)]">brandContext</code>.
+              </p>
+            </li>
+          </ol>
+
+          <SnippetBlock
+            label="ChatGPT MCP URL"
+            value={mcpUrl}
+            copied={copied}
+            copyKind="config"
+            onCopy={copyText}
+          />
+          <p className="text-xs leading-relaxed text-[var(--muted)]">
+            Plus/Pro may be limited to read tools; write actions (
+            <code className="font-mono text-[var(--ink)]">ingest</code>) often
+            need Business / Enterprise / Edu. Docs:{" "}
+            <a
+              className="underline underline-offset-2"
+              href="https://developers.openai.com/api/docs/guides/developer-mode"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              OpenAI developer mode
+            </a>
+            .
           </p>
         </div>
       ) : (

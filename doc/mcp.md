@@ -45,11 +45,11 @@ Trigger.dev ingest + dream      ← must run for fresh facts
 | `POST /v3/profile` (+ static/dynamic cards) | Done |
 | `POST /v3/answer` | Done (brand advantage vs Supermemory) |
 | Brand-scoped API keys (`sm_…` + forced `brandTag`) | Done |
-| `GET /v3/session` (key → user / brand / tag) | **Missing** |
+| `GET /v3/session` (key → user / brand / tag) | Done |
 | Public forget API | **Missing** (dream-internal forget only) |
 | List documents/memories for agents | **Missing** (optional for v1) |
-| OAuth authorization server for MCP clients | **Missing** (API key enough for v1) |
-| Landing Connect UI (`McpSetup`) | Planned in `desin.md` |
+| OAuth authorization server for MCP clients | Done (`mcp()` plugin + well-known + dual auth) |
+| Landing Connect UI (`McpSetup`) | Done (Cursor / Claude / ChatGPT) |
 
 ## Auth model
 
@@ -72,11 +72,18 @@ Trigger.dev ingest + dream      ← must run for fresh facts
 - Never allow public/playground auth on remote MCP.
 - Tag MCP writes: `metadata.source: "mcp"` (or `desin_source: "mcp"`).
 
-### v2 — OAuth (later)
+### v2 — OAuth (ChatGPT / connectors)
 
-- brand-layer Better Auth = **authorization server**
-- MCP = **resource server** with `/.well-known/oauth-protected-resource`
-- Mirror Supermemory: clients discover auth via metadata; MCP validates tokens against the main API
+- brand-layer Better Auth = **authorization server** via `mcp()` plugin
+- Discovery: `/.well-known/oauth-authorization-server`, `/.well-known/oauth-protected-resource[/mcp]`
+- MCP dual-auth: `Bearer sm_…` **or** OAuth access token (`auth.api.getMcpSession`)
+- Login: `/login` · Consent (brand picker): `/oauth/consent`
+- ChatGPT: Developer mode → create app → paste `https://…/api/mcp` → **OAuth** (not API key headers)
+
+| Status | Item |
+| --- | --- |
+| Done | OAuth AS + RS metadata, dual auth, consent brand scope, Connect ChatGPT tab |
+| Optional | Force consent on every connect; Apps SDK directory listing |
 
 ## Tool surface (brand-native)
 
@@ -154,7 +161,7 @@ apps/mcp/   (or packages/mcp)
 1. Deploy CF Worker at `https://mcp.<domain>/mcp` with `API_URL` pointing at brand-layer.
 2. E2E: ingest guideline → wait dream → `brandContext` for tone / primary color / forbidden claims.
 3. Add `forget` + `listBrandFacts` when APIs exist.
-4. OAuth when multi-user console + consent are real.
+4. Apps SDK / catalog listing when you want installable ChatGPT apps (optional).
 
 ## Success criteria
 
@@ -166,9 +173,9 @@ apps/mcp/   (or packages/mcp)
 ## Non-goals (v1)
 
 - Memory-graph UI inside MCP
-- Full OAuth (API key is enough)
 - Binary DAM / multi-part file upload via MCP (text + URL ingest only)
 - Dreaming or LLM inference inside the MCP process
+- ChatGPT Apps SDK / directory listing (custom Developer mode connector is enough)
 
 ## Example agent flows
 

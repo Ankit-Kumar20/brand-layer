@@ -46,6 +46,17 @@ function claudeDesktopConfig(url: string, apiKey: string) {
 }`;
 }
 
+function chatgptSteps(url: string) {
+  return `1. Open ChatGPT (web) → Settings → Security and login → enable Developer mode.
+2. Go to ChatGPT Plugins / Apps → Create (Developer mode).
+3. Paste MCP URL:
+   ${url}
+4. Authentication: OAuth (not API key). Sign in to desin and pick a brand if prompted.
+5. In a chat, choose Developer mode and ask to call whoAmI or brandContext.
+
+Docs: https://developers.openai.com/api/docs/guides/developer-mode`;
+}
+
 export function ConnectSection() {
   const { brands, loading: brandsLoading } = useBrands();
   const [{ settingsBrand: brandId, mcp: client }, setParams] = useQueryStates({
@@ -135,7 +146,9 @@ export function ConnectSection() {
   const config =
     client === "claude"
       ? claudeDesktopConfig(mcpUrl, apiKey ?? "")
-      : sharedConfig(mcpUrl, apiKey ?? "");
+      : client === "chatgpt"
+        ? chatgptSteps(mcpUrl)
+        : sharedConfig(mcpUrl, apiKey ?? "");
 
   return (
     <div className="flex flex-col">
@@ -231,6 +244,7 @@ export function ConnectSection() {
             [
               { id: "cursor", label: "Cursor" },
               { id: "claude", label: "Claude" },
+              { id: "chatgpt", label: "ChatGPT" },
             ] as const
           ).map((item) => (
             <button
@@ -254,7 +268,11 @@ export function ConnectSection() {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">
-              {client === "claude" ? "Claude Desktop config" : "mcp.json"}
+              {client === "claude"
+                ? "Claude Desktop config"
+                : client === "chatgpt"
+                  ? "ChatGPT setup"
+                  : "mcp.json"}
             </span>
             <Button
               onClick={() => void copyText(config, "config")}

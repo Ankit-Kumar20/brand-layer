@@ -43,6 +43,13 @@
       "when": 1785558558865,
       "tag": "0005_low_betty_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785583648562,
+      "tag": "0006_modern_nightmare",
+      "breakpoints": true
     }
   ]
 }

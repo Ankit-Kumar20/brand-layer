@@ -40,7 +40,7 @@ export const settingsSections = [
   "billing",
 ] as const;
 
-export const mcpClients = ["cursor", "claude"] as const;
+export const mcpClients = ["cursor", "claude", "chatgpt"] as const;
 
 export const workspaceSearchParams = {
   view: parseAsStringLiteral(workspaceViews).withDefault("create"),

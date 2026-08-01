@@ -294,6 +294,8 @@ export function registerDesinMcpTools(server: McpServer) {
               brandId: session.brandId,
               brandTag: session.brandTag,
               keyId: session.keyId,
+              authMethod: session.authMethod,
+              clientId: session.clientId ?? null,
             },
             null,
             2,

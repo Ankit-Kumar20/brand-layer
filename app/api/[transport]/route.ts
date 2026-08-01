@@ -2,6 +2,7 @@ import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { resolveMcpSession } from "@/lib/mcp/auth";
 import { registerDesinMcpTools } from "@/lib/mcp/tools";
+import { mcpResourceUrl } from "@/lib/mcp/urls";
 
 export const maxDuration = 60;
 
@@ -23,10 +24,10 @@ const handler = createMcpHandler(
 );
 
 async function verifyToken(
-  _req: Request,
+  req: Request,
   bearerToken?: string,
 ): Promise<AuthInfo | undefined> {
-  const session = await resolveMcpSession(bearerToken);
+  const session = await resolveMcpSession(bearerToken, req);
   if (!session) return undefined;
 
   return {
@@ -39,6 +40,8 @@ async function verifyToken(
 
 const authHandler = withMcpAuth(handler, verifyToken, {
   required: true,
+  resourceMetadataPath: "/.well-known/oauth-protected-resource/mcp",
+  resourceUrl: mcpResourceUrl(),
 });
 
 export { authHandler as GET, authHandler as POST, authHandler as DELETE };
