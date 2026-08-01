@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { AgentationToolbar } from "@/components/agentation-toolbar";
 
@@ -38,8 +39,12 @@ export default function RootLayout({
       style={{ colorScheme: "light" }}
     >
       <body className="flex min-h-full flex-col font-sans">
-        {children}
-        {process.env.NODE_ENV === "development" ? <AgentationToolbar /> : null}
+        <NuqsAdapter>
+          {children}
+          {process.env.NODE_ENV === "development" ? (
+            <AgentationToolbar />
+          ) : null}
+        </NuqsAdapter>
       </body>
     </html>
   );

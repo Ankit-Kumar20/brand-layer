@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import { useQueryStates } from "nuqs";
 
 import {
   HomepageToolIcon,
@@ -15,9 +16,17 @@ import {
   type HomepageToolId,
 } from "@/components/landing/integrations";
 import { AddBrandPanel } from "@/components/workspace/add-brand-panel";
+import { SettingsPanel } from "@/components/workspace/settings-panel";
 import { WorkspaceChat } from "@/components/workspace/workspace-chat";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import {
+  workspaceBrands,
+  workspaceSearchParams,
+  workspaceTeams,
+  type WorkspaceTeamId,
+  type WorkspaceView,
+} from "@/lib/workspace/search-params";
 
 type WorkspaceShellProps = {
   user: {
@@ -29,7 +38,7 @@ type WorkspaceShellProps = {
 };
 
 type Team = {
-  id: string;
+  id: WorkspaceTeamId;
   name: string;
   plan: string;
   brands: Brand[];
@@ -79,12 +88,7 @@ const primaryNav = [
   { id: "connect", label: "Connect" },
 ] as const;
 
-type PrimaryNavId =
-  | (typeof primaryNav)[number]["id"]
-  | "settings"
-  | "add-brand";
-
-const PAGE_TITLES: Record<PrimaryNavId, string> = {
+const PAGE_TITLES: Record<WorkspaceView, string> = {
   create: "Create",
   library: "Library",
   kit: "Brand kit",
@@ -112,13 +116,14 @@ function readStoredChatWidth() {
 }
 
 export function WorkspaceShell({ user }: WorkspaceShellProps) {
-  const [view, setView] = useState<PrimaryNavId>("create");
-  const [teamId, setTeamId] = useState(TEAMS[0].id);
-  const [brandId, setBrandId] = useState(TEAMS[0].brands[0].id);
+  const [{ view, team: teamId, brand: brandId, q: query }, setParams] =
+    useQueryStates(workspaceSearchParams, {
+      history: "push",
+      shallow: true,
+    });
   const [teamMenuOpen, setTeamMenuOpen] = useState(false);
   const [brandMenuOpen, setBrandMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const [chatWidth, setChatWidth] = useState(CHAT_WIDTH_DEFAULT);
   const [resizingChat, setResizingChat] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -128,7 +133,10 @@ export function WorkspaceShell({ user }: WorkspaceShellProps) {
   const chatPanelRef = useRef<HTMLElement>(null);
   const chatWidthRef = useRef(chatWidth);
 
-  const team = TEAMS.find((item) => item.id === teamId) ?? TEAMS[0];
+  const team =
+    TEAMS.find((item) => item.id === teamId) ??
+    TEAMS.find((item) => item.id === workspaceTeams[0]) ??
+    TEAMS[0];
   const brand =
     team.brands.find((item) => item.id === brandId) ?? team.brands[0];
   const brandName = brand.name;
@@ -141,6 +149,13 @@ export function WorkspaceShell({ user }: WorkspaceShellProps) {
   const addingBrand = view === "add-brand";
   const displayName = user.name?.trim().split(/\s+/)[0] || user.email;
   const initials = (displayName?.[0] ?? "U").toUpperCase();
+
+  function setView(next: WorkspaceView) {
+    void setParams({
+      view: next,
+      ...(next === "settings" ? {} : { settings: null }),
+    });
+  }
 
   useEffect(() => {
     setChatWidth(readStoredChatWidth());
@@ -206,16 +221,18 @@ export function WorkspaceShell({ user }: WorkspaceShellProps) {
     window.location.href = "/";
   }
 
-  function selectTeam(nextTeamId: string) {
+  function selectTeam(nextTeamId: WorkspaceTeamId) {
     const next = TEAMS.find((item) => item.id === nextTeamId);
     if (!next) return;
-    setTeamId(next.id);
-    setBrandId(next.brands[0]?.id ?? "");
+    void setParams({
+      team: next.id,
+      brand: next.brands[0]?.id ?? workspaceBrands[0],
+    });
     setTeamMenuOpen(false);
   }
 
   function selectBrand(nextBrandId: HomepageToolId) {
-    setBrandId(nextBrandId);
+    void setParams({ brand: nextBrandId });
     setBrandMenuOpen(false);
   }
 
@@ -278,7 +295,9 @@ export function WorkspaceShell({ user }: WorkspaceShellProps) {
             {/* Search — homepage / Cossistant flat field */}
             <input
               className="h-10 w-full bg-background-50 px-3 text-sm text-foreground outline-none transition-colors duration-300 ease-[var(--ease-swift)] placeholder:text-muted-foreground focus:bg-background-100"
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                void setParams({ q: event.target.value || null });
+              }}
               placeholder="Find…"
               ref={searchRef}
               value={query}
@@ -416,6 +435,12 @@ export function WorkspaceShell({ user }: WorkspaceShellProps) {
               </div>
             ) : addingBrand ? (
               <AddBrandPanel onDone={() => setView("create")} />
+            ) : view === "settings" ? (
+              <SettingsPanel
+                onAddBrand={() => setView("add-brand")}
+                onSignOut={() => void handleSignOut()}
+                user={user}
+              />
             ) : (
               <div className="flex flex-1 items-center justify-center">
                 <p className="text-sm text-muted-foreground">
