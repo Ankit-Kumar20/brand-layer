@@ -60,16 +60,16 @@ function buildBrandCards(
 
 export async function recomputeProfile(
   userId: string,
-  containerTag: string,
+  brandTag: string,
 ): Promise<BrandProfile> {
-  memoryLog("L7", "recompute profile", { containerTag });
+  memoryLog("L7", "recompute profile", { brandTag });
   const rows = await db
     .select()
     .from(memories)
     .where(
       and(
         eq(memories.userId, userId),
-        eq(memories.containerTag, containerTag),
+        eq(memories.brandTag, brandTag),
         eq(memories.isLatest, true),
         eq(memories.isForgotten, false),
       ),
@@ -91,7 +91,7 @@ export async function recomputeProfile(
   const existing = await db.query.profiles.findFirst({
     where: and(
       eq(profiles.userId, userId),
-      eq(profiles.containerTag, containerTag),
+      eq(profiles.brandTag, brandTag),
     ),
   });
 
@@ -105,7 +105,7 @@ export async function recomputeProfile(
       })
       .where(eq(profiles.id, existing.id));
     memoryLog("L7", "profile updated", {
-      containerTag,
+      brandTag,
       static: staticFacts.length,
       dynamic: dynamicFacts.length,
     });
@@ -113,12 +113,12 @@ export async function recomputeProfile(
     await db.insert(profiles).values({
       id: nanoid(),
       userId,
-      containerTag,
+      brandTag,
       staticFacts,
       dynamicFacts,
     });
     memoryLog("L7", "profile created", {
-      containerTag,
+      brandTag,
       static: staticFacts.length,
       dynamic: dynamicFacts.length,
     });
@@ -134,9 +134,9 @@ export async function recomputeProfile(
 
 export async function getProfile(
   userId: string,
-  containerTag: string,
+  brandTag: string,
 ): Promise<BrandProfile> {
-  memoryLog("L8", "get profile", { containerTag });
+  memoryLog("L8", "get profile", { brandTag });
 
   // Always rebuild cards from latest memories so categories stay accurate.
   const rows = await db
@@ -145,7 +145,7 @@ export async function getProfile(
     .where(
       and(
         eq(memories.userId, userId),
-        eq(memories.containerTag, containerTag),
+        eq(memories.brandTag, brandTag),
         eq(memories.isLatest, true),
         eq(memories.isForgotten, false),
       ),
@@ -156,7 +156,7 @@ export async function getProfile(
     const existing = await db.query.profiles.findFirst({
       where: and(
         eq(profiles.userId, userId),
-        eq(profiles.containerTag, containerTag),
+        eq(profiles.brandTag, brandTag),
       ),
     });
     if (existing) {
@@ -167,7 +167,7 @@ export async function getProfile(
         dynamicCard: emptyDynamicCard(),
       };
     }
-    return recomputeProfile(userId, containerTag);
+    return recomputeProfile(userId, brandTag);
   }
 
   const staticFacts = rows
@@ -181,7 +181,7 @@ export async function getProfile(
   const { staticCard, dynamicCard } = buildBrandCards(rows);
 
   memoryLog("L8", "profile from memories", {
-    containerTag,
+    brandTag,
     static: staticFacts.length,
     dynamic: dynamicFacts.length,
   });

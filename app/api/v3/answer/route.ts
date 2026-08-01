@@ -1,6 +1,6 @@
 import {
   requireApiAuth,
-  resolveContainerTag,
+  resolveBrandTag,
 } from "@/lib/auth-request";
 import { answerBrandQuestion } from "@/lib/memory/answer";
 import { memoryError, memoryLog } from "@/lib/memory/log";
@@ -21,19 +21,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const containerTag = await resolveContainerTag(
+    const brandTag = await resolveBrandTag(
       auth,
-      parsed.data.containerTag,
+      parsed.data.brandTag,
     );
 
     memoryLog("api", "POST /v3/answer", {
-      containerTag,
+      brandTag,
       q: parsed.data.q.slice(0, 80),
     });
 
     const result = await answerBrandQuestion(auth.userId, {
       ...parsed.data,
-      containerTag,
+      brandTag,
     });
 
     memoryLog("api", "POST /v3/answer ok", {

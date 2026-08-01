@@ -49,8 +49,8 @@ function defaultMetadata(
 
 export async function queueDocumentIngest(
   userId: string,
-  containerTag: string,
-  input: DocumentAddInput & { containerTag?: string },
+  brandTag: string,
+  input: DocumentAddInput & { brandTag?: string },
 ) {
   const type = resolveDocumentType(input);
   const metadata = defaultMetadata(type, {
@@ -73,7 +73,7 @@ export async function queueDocumentIngest(
     const existing = await db.query.documents.findFirst({
       where: and(
         eq(documents.userId, userId),
-        eq(documents.containerTag, containerTag),
+        eq(documents.brandTag, brandTag),
         eq(documents.customId, input.customId),
       ),
     });
@@ -100,7 +100,7 @@ export async function queueDocumentIngest(
       await db.insert(documents).values({
         id: documentId,
         userId,
-        containerTag,
+        brandTag,
         customId: input.customId,
         content: storedContent,
         url: input.url ?? null,
@@ -117,7 +117,7 @@ export async function queueDocumentIngest(
     await db.insert(documents).values({
       id: documentId,
       userId,
-      containerTag,
+      brandTag,
       content: storedContent,
       url: input.url ?? null,
       contentHash: hash,
@@ -131,5 +131,5 @@ export async function queueDocumentIngest(
 
   await enqueueIngestJob(documentId, { contentHash: hash });
 
-  return { id: documentId, status: "queued" as const, containerTag, type };
+  return { id: documentId, status: "queued" as const, brandTag, type };
 }

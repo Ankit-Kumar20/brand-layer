@@ -6,7 +6,7 @@ import {
   type ApiKeyAuth,
 } from "@/lib/auth-api-key";
 import {
-  getBrandByContainerTagIfOwner,
+  getBrandByBrandTagIfOwner,
   getSessionUser,
 } from "@/lib/auth-session";
 
@@ -15,13 +15,13 @@ export type RequestAuth = {
   keyId: string | null;
   brandId: string | null;
   /** When set from a brand-scoped key, routes must use this tag. */
-  forcedContainerTag: string | null;
+  forcedBrandTag: string | null;
 };
 
 /**
  * Resolve caller identity for /v3 routes.
- * - Bearer API key → user (+ optional brand containerTag)
- * - Better Auth session → user (must own the containerTag)
+ * - Bearer API key → user (+ optional brandTag)
+ * - Better Auth session → user (must own the brandTag)
  * - Otherwise → 401
  */
 export async function requireApiAuth(
@@ -29,12 +29,12 @@ export async function requireApiAuth(
 ): Promise<RequestAuth> {
   const verified = await verifyApiKey(request.headers.get("Authorization"));
   if (verified) {
-    const forced = await resolveBrandContainerTag(verified);
+    const forced = await brandTagFromApiKey(verified);
     return {
       userId: verified.userId,
       keyId: verified.keyId,
       brandId: verified.brandId,
-      forcedContainerTag: forced,
+      forcedBrandTag: forced,
     };
   }
 
@@ -44,7 +44,7 @@ export async function requireApiAuth(
       userId: sessionUser.id,
       keyId: null,
       brandId: null,
-      forcedContainerTag: null,
+      forcedBrandTag: null,
     };
   }
 
@@ -57,16 +57,16 @@ export async function requireApiAuth(
 /**
  * Prefer key-bound brand tag. For session auth, require ownership of the tag.
  */
-export async function resolveContainerTag(
+export async function resolveBrandTag(
   auth: RequestAuth,
   clientTag: string | undefined,
 ): Promise<string> {
-  if (auth.forcedContainerTag) return auth.forcedContainerTag;
+  if (auth.forcedBrandTag) return auth.forcedBrandTag;
 
   const tag = clientTag?.trim();
   if (!tag) {
     throw Response.json(
-      { error: "containerTag is required" },
+      { error: "brandTag is required" },
       { status: 400 },
     );
   }
@@ -74,10 +74,10 @@ export async function resolveContainerTag(
   // Brand-scoped key already forced above. Session (or unscoped key):
   // require the user to own a brand with this tag.
   if (!auth.keyId || !auth.brandId) {
-    const brand = await getBrandByContainerTagIfOwner(auth.userId, tag);
+    const brand = await getBrandByBrandTagIfOwner(auth.userId, tag);
     if (!brand) {
       throw Response.json(
-        { error: "Forbidden — no access to this containerTag" },
+        { error: "Forbidden — no access to this brandTag" },
         { status: 403 },
       );
     }
@@ -86,7 +86,7 @@ export async function resolveContainerTag(
   return tag;
 }
 
-async function resolveBrandContainerTag(
+async function brandTagFromApiKey(
   auth: ApiKeyAuth,
 ): Promise<string | null> {
   if (!auth.brandId) return null;
@@ -94,7 +94,7 @@ async function resolveBrandContainerTag(
     const brand = await db.query.brands.findFirst({
       where: eq(brands.id, auth.brandId),
     });
-    return brand?.containerTag ?? null;
+    return brand?.brandTag ?? null;
   } catch {
     return null;
   }

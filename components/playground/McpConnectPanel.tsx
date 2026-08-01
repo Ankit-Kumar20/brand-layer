@@ -87,14 +87,14 @@ function SnippetBlock({
   );
 }
 
-export function McpConnectPanel({ containerTag }: { containerTag: string }) {
+export function McpConnectPanel({ brandTag }: { brandTag: string }) {
   const [active, setActive] = useState<ClientId>("claude");
   const [copied, setCopied] = useState<CopyKind | null>(null);
   const [mcpUrl] = useState(resolveMcpUrl);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [keyMeta, setKeyMeta] = useState<{
     brandId: string;
-    containerTag: string;
+    brandTag: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -103,7 +103,7 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
     setApiKey(null);
     setKeyMeta(null);
     setError(null);
-  }, [containerTag]);
+  }, [brandTag]);
 
   const isLocalhost = mcpUrl.includes("localhost");
   const keyOrPlaceholder = apiKey ?? "";
@@ -122,8 +122,8 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
   }
 
   function generateKey(forceNew = false) {
-    if (!containerTag.trim()) {
-      setError("Set a containerTag above first.");
+    if (!brandTag.trim()) {
+      setError("Set a brandTag above first.");
       return;
     }
     setError(null);
@@ -137,14 +137,14 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
             Accept: "application/json",
           },
           body: JSON.stringify({
-            containerTag: containerTag.trim(),
+            brandTag: brandTag.trim(),
             forceNew,
           }),
         });
         const data = (await res.json()) as {
           key?: string;
           brandId?: string;
-          containerTag?: string;
+          brandTag?: string;
           created?: boolean;
           error?: string;
           detail?: string;
@@ -156,7 +156,7 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
         setApiKey(data.key);
         setKeyMeta({
           brandId: data.brandId ?? "",
-          containerTag: data.containerTag ?? containerTag.trim(),
+          brandTag: data.brandTag ?? brandTag.trim(),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to mint key");
@@ -172,11 +172,11 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
         </h2>
         <p className="text-sm leading-relaxed text-[var(--muted)]">
           Wire this brand into Claude or Cursor with a brand API key.
-          {containerTag.trim() ? (
+          {brandTag.trim() ? (
             <>
               {" "}
               Current tag:{" "}
-              <code className="font-mono text-[var(--ink)]">{containerTag}</code>
+              <code className="font-mono text-[var(--ink)]">{brandTag}</code>
             </>
           ) : null}
         </p>
@@ -193,7 +193,7 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={pending || !containerTag.trim()}
+              disabled={pending || !brandTag.trim()}
               onClick={() => generateKey(false)}
               className="rounded border border-[var(--line)] bg-[var(--sheet)] px-3 py-2 text-sm font-medium text-[var(--ink)] hover:bg-[var(--bg)] disabled:opacity-50"
             >
@@ -206,7 +206,7 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
             {apiKey ? (
               <button
                 type="button"
-                disabled={pending || !containerTag.trim()}
+                disabled={pending || !brandTag.trim()}
                 onClick={() => generateKey(true)}
                 className="rounded border border-[var(--line)] px-3 py-2 text-sm text-[var(--ink)] hover:bg-[var(--sheet)] disabled:opacity-50"
               >
@@ -234,7 +234,7 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
             </div>
             {keyMeta ? (
               <p className="font-mono text-[11px] text-[var(--muted)]">
-                brandId={keyMeta.brandId} · containerTag={keyMeta.containerTag}
+                brandId={keyMeta.brandId} · brandTag={keyMeta.brandTag}
               </p>
             ) : null}
           </div>
@@ -309,7 +309,7 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
               <p className="text-sm leading-relaxed text-[var(--muted)]">
                 Use the button above. Prefer a brand-scoped{" "}
                 <code className="font-mono text-[var(--ink)]">sm_…</code> key so
-                containerTag is automatic.
+                brandTag is automatic.
               </p>
             </li>
             <li className="space-y-1">
@@ -411,7 +411,7 @@ export function McpConnectPanel({ containerTag }: { containerTag: string }) {
               </p>
               <p className="text-sm leading-relaxed text-[var(--muted)]">
                 Use the button above to mint a brand-scoped key for this
-                containerTag.
+                brandTag.
               </p>
             </li>
             <li className="space-y-1">

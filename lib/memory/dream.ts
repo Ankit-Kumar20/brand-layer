@@ -35,7 +35,7 @@ async function linkSource(memoryId: string, documentId: string) {
 
 async function insertMemory(opts: {
   userId: string;
-  containerTag: string;
+  brandTag: string;
   text: string;
   isStatic?: boolean;
   isInference?: boolean;
@@ -52,7 +52,7 @@ async function insertMemory(opts: {
   await db.insert(memories).values({
     id,
     userId: opts.userId,
-    containerTag: opts.containerTag,
+    brandTag: opts.brandTag,
     memory: opts.text,
     isStatic: opts.isStatic ?? false,
     isLatest: true,
@@ -89,7 +89,7 @@ async function addEdge(
 
 async function findNearDuplicate(
   userId: string,
-  containerTag: string,
+  brandTag: string,
   embedding: number[],
 ) {
   const rows = await db
@@ -98,7 +98,7 @@ async function findNearDuplicate(
     .where(
       and(
         eq(memories.userId, userId),
-        eq(memories.containerTag, containerTag),
+        eq(memories.brandTag, brandTag),
         eq(memories.isLatest, true),
         eq(memories.isForgotten, false),
       ),
@@ -120,7 +120,7 @@ async function applyOp(
   op: DreamOp,
   ctx: {
     userId: string;
-    containerTag: string;
+    brandTag: string;
     documentId: string;
     docMetadata?: Record<string, string | number | boolean> | null;
   },
@@ -147,7 +147,7 @@ async function applyOp(
         and(
           eq(memories.id, op.targetMemoryId),
           eq(memories.userId, ctx.userId),
-          eq(memories.containerTag, ctx.containerTag),
+          eq(memories.brandTag, ctx.brandTag),
         ),
       );
     memoryLog("L6", "op forget", {
@@ -173,7 +173,7 @@ async function applyOp(
   if (op.category) metadata.category = op.category;
 
   const embedding = await embedText(text);
-  const dup = await findNearDuplicate(ctx.userId, ctx.containerTag, embedding);
+  const dup = await findNearDuplicate(ctx.userId, ctx.brandTag, embedding);
   if (dup && (op.op === "new" || op.op === "extend" || op.op === "derive")) {
     memoryLog("L6", "op deduped", {
       documentId: ctx.documentId,
@@ -189,7 +189,7 @@ async function applyOp(
     if (!targetId) {
       const id = await insertMemory({
         userId: ctx.userId,
-        containerTag: ctx.containerTag,
+        brandTag: ctx.brandTag,
         text,
         isStatic: op.isStatic,
         documentId: ctx.documentId,
@@ -225,7 +225,7 @@ async function applyOp(
 
     const newId = await insertMemory({
       userId: ctx.userId,
-      containerTag: ctx.containerTag,
+      brandTag: ctx.brandTag,
       text,
       isStatic: op.isStatic ?? old.isStatic,
       version: old.version + 1,
@@ -251,7 +251,7 @@ async function applyOp(
   if (op.op === "extend" || op.op === "derive") {
     const newId = await insertMemory({
       userId: ctx.userId,
-      containerTag: ctx.containerTag,
+      brandTag: ctx.brandTag,
       text,
       isStatic: op.isStatic,
       isInference: op.op === "derive",
@@ -278,7 +278,7 @@ async function applyOp(
   // new
   const id = await insertMemory({
     userId: ctx.userId,
-    containerTag: ctx.containerTag,
+    brandTag: ctx.brandTag,
     text,
     isStatic: op.isStatic,
     documentId: ctx.documentId,
@@ -302,7 +302,7 @@ export async function dreamDocument(documentId: string) {
 
   memoryLog("L6", "dream start", {
     documentId,
-    containerTag: doc.containerTag,
+    brandTag: doc.brandTag,
     chars: doc.rawText.length,
   });
 
@@ -317,7 +317,7 @@ export async function dreamDocument(documentId: string) {
     .where(
       and(
         eq(memories.userId, doc.userId),
-        eq(memories.containerTag, doc.containerTag),
+        eq(memories.brandTag, doc.brandTag),
         eq(memories.isLatest, true),
         eq(memories.isForgotten, false),
       ),
@@ -352,7 +352,7 @@ Rules:
 - Use forget when content retires a claim, logo, or expired campaign.
 - Ignore fluff and unrelated noise.`;
 
-  const userPrompt = `Brand container: ${doc.containerTag}
+  const userPrompt = `Brand tag: ${doc.brandTag}
 Document type: ${doc.type}
 Document metadata: ${JSON.stringify(doc.metadata ?? {})}
 
@@ -406,7 +406,7 @@ ${truncate(doc.rawText, 12_000)}`;
   for (const op of ops) {
     await applyOp(op, {
       userId: doc.userId,
-      containerTag: doc.containerTag,
+      brandTag: doc.brandTag,
       documentId: doc.id,
       docMetadata: doc.metadata,
     });
@@ -414,9 +414,9 @@ ${truncate(doc.rawText, 12_000)}`;
 
   memoryLog("L7", "profile recompute start", {
     documentId,
-    containerTag: doc.containerTag,
+    brandTag: doc.brandTag,
   });
-  await recomputeProfile(doc.userId, doc.containerTag);
+  await recomputeProfile(doc.userId, doc.brandTag);
   memoryLog("L6", "dream complete", {
     documentId,
     opsApplied: ops.length,
@@ -425,9 +425,9 @@ ${truncate(doc.rawText, 12_000)}`;
   return { opsApplied: ops.length };
 }
 
-export async function dreamBatch(userId: string, containerTag: string, documentId?: string | null) {
+export async function dreamBatch(userId: string, brandTag: string, documentId?: string | null) {
   if (documentId) {
-    memoryLog("L6", "dreamBatch → document", { documentId, containerTag });
+    memoryLog("L6", "dreamBatch → document", { documentId, brandTag });
     return dreamDocument(documentId);
   }
 
@@ -438,7 +438,7 @@ export async function dreamBatch(userId: string, containerTag: string, documentI
     .where(
       and(
         eq(documents.userId, userId),
-        eq(documents.containerTag, containerTag),
+        eq(documents.brandTag, brandTag),
         eq(documents.status, "done"),
         eq(documents.taskType, "memory"),
       ),
@@ -448,12 +448,12 @@ export async function dreamBatch(userId: string, containerTag: string, documentI
 
   const doc = recent[0];
   if (!doc) {
-    memoryLog("L6", "dreamBatch empty — no done docs", { containerTag });
+    memoryLog("L6", "dreamBatch empty — no done docs", { brandTag });
     return { opsApplied: 0 };
   }
   memoryLog("L6", "dreamBatch → latest doc", {
     documentId: doc.id,
-    containerTag,
+    brandTag,
   });
   return dreamDocument(doc.id);
 }

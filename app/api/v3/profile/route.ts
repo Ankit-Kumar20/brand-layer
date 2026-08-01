@@ -1,6 +1,6 @@
 import {
   requireApiAuth,
-  resolveContainerTag,
+  resolveBrandTag,
 } from "@/lib/auth-request";
 import { memoryError, memoryLog } from "@/lib/memory/log";
 import { getProfile } from "@/lib/memory/profile";
@@ -22,23 +22,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const containerTag = await resolveContainerTag(
+    const brandTag = await resolveBrandTag(
       auth,
-      parsed.data.containerTag,
+      parsed.data.brandTag,
     );
 
     memoryLog("api", "POST /v3/profile", {
-      containerTag,
+      brandTag,
       includeSearch: !!parsed.data.includeSearch,
     });
 
-    const profile = await getProfile(auth.userId, containerTag);
+    const profile = await getProfile(auth.userId, brandTag);
 
     let searchResults;
     if (parsed.data.includeSearch && parsed.data.q) {
       searchResults = await searchMemoriesAndDocuments(auth.userId, {
         q: parsed.data.q,
-        containerTag,
+        brandTag,
         searchMode: "hybrid",
         limit: 10,
         threshold: 0.3,

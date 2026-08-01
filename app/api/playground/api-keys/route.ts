@@ -3,12 +3,12 @@ import {
   ensureDefaultBrandApiKey,
 } from "@/lib/auth-api-key";
 import {
-  ensureBrandForContainerTag,
+  ensureBrandForTag,
   requireUserSession,
 } from "@/lib/auth-session";
 
 /**
- * Get or mint a brand-scoped API key for a containerTag.
+ * Get or mint a brand-scoped API key for a brandTag.
  * Requires Better Auth session. Creates brand+org (+ key) when the tag is free.
  * Returns the recoverable raw key (encrypted at rest).
  */
@@ -16,24 +16,24 @@ export async function POST(request: Request) {
   try {
     const user = await requireUserSession(request);
     const body = (await request.json().catch(() => ({}))) as {
-      containerTag?: string;
+      brandTag?: string;
       name?: string;
       brandName?: string;
       /** When true, always mint a new key instead of revealing the existing one. */
       forceNew?: boolean;
     };
 
-    const containerTag = body.containerTag?.trim();
-    if (!containerTag) {
+    const brandTag = body.brandTag?.trim();
+    if (!brandTag) {
       return Response.json(
-        { error: "containerTag is required" },
+        { error: "brandTag is required" },
         { status: 400 },
       );
     }
 
-    const brandResult = await ensureBrandForContainerTag(
+    const brandResult = await ensureBrandForTag(
       user.id,
-      containerTag,
+      brandTag,
       { name: body.brandName },
     );
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       prefix: key.prefix,
       userId: user.id,
       brandId: brandResult.id,
-      containerTag: brandResult.containerTag,
+      brandTag: brandResult.brandTag,
       created: key.created,
       recoverable: key.recoverable,
       warning: key.created

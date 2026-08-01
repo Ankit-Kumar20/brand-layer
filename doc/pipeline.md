@@ -21,7 +21,7 @@ Already in place:
 | Auth | Better Auth (done) |
 | Org / project | `organizations`, `projects` tables |
 | API keys | `api_keys` (hashed); middleware on `/v3/*` |
-| Isolation key | every row has `containerTag` + `projectId` |
+| Isolation key | every row has `brandTag` + `projectId` |
 | Console | list docs / memories / search playground |
 
 ---
@@ -32,7 +32,7 @@ Already in place:
 | --- | --- |
 | Routes | `POST /v3/documents`, `GET /v3/documents/:id` |
 | Input | text · URL · file upload (R2/S3 later) |
-| Fields | `content`, `containerTag`, `customId`, `taskType`, `metadata`, `dreaming` |
+| Fields | `content`, `brandTag`, `customId`, `taskType`, `metadata`, `dreaming` |
 | Table | `documents` → `id`, status, content hash, customId, taskType, timestamps |
 | Behavior | accept → set `queued` → enqueue job → return id |
 
@@ -88,7 +88,7 @@ Already in place:
 | LLM job | extract atomic facts from text + existing memories in container |
 | Prompt ops | classify each fact: **new / update / extend / derive / ignore / forget** |
 | Dedup | embedding similarity + LLM resolve conflicts |
-| Table | `memories` → text, `isStatic`, `isLatest`, embedding, containerTag, sourceDocumentIds |
+| Table | `memories` → text, `isStatic`, `isLatest`, embedding, brandTag, sourceDocumentIds |
 | Edges | `memory_edges` → `fromId`, `toId`, `type` ∈ `updates \| extends \| derives` |
 | Profile refresh | recompute static / dynamic lists (or cache table `profiles`) |
 
@@ -111,7 +111,7 @@ Already in place:
 | --- | --- |
 | `POST /v3/search` | embed query → vector ANN + FTS → merge → filter metadata → optional edge expand → rank |
 | Modes | `memories` \| `documents` \| `hybrid` |
-| `POST /v3/profile` | return `{ static, dynamic, buckets? }` for `containerTag` (+ optional `q` / `filters`) |
+| `POST /v3/profile` | return `{ static, dynamic, buckets? }` for `brandTag` (+ optional `q` / `filters`) |
 | Rank signals | score, recency, static boost, edge strength |
 
 ---
@@ -149,7 +149,7 @@ trigger/dream.ts          # L9 dream-batch
 
 ## Build order
 
-1. **L0** — keys + `containerTag`
+1. **L0** — keys + `brandTag`
 2. **L1** — accept document + status
 3. **L3–L5** — text-only RAG (chunk / embed / search documents)
 4. **L8** — document search
@@ -169,7 +169,7 @@ Skip fancy extractors and connectors until search + profile work on plain text.
 
 ```text
 Client
-  │  API key + containerTag
+  │  API key + brandTag
   ▼
 L1 Ingest ──queued──► L9 Worker
                           │
@@ -217,7 +217,7 @@ curl -s -X POST http://localhost:3000/v3/documents \
   -H "Content-Type: application/json" \
   -d '{
     "content": "My name is Alex. I prefer dark mode and work at Stripe as a PM.",
-    "containerTag": "user_alex",
+    "brandTag": "user_alex",
     "customId": "onboarding_1",
     "dreaming": "instant"
   }' | jq
@@ -230,12 +230,12 @@ curl -s http://localhost:3000/v3/documents/<id> \
 curl -s -X POST http://localhost:3000/v3/search \
   -H "Authorization: Bearer sm_..." \
   -H "Content-Type: application/json" \
-  -d '{"q":"where does Alex work?","containerTag":"user_alex","searchMode":"hybrid"}' | jq
+  -d '{"q":"where does Alex work?","brandTag":"user_alex","searchMode":"hybrid"}' | jq
 
 curl -s -X POST http://localhost:3000/v3/profile \
   -H "Authorization: Bearer sm_..." \
   -H "Content-Type: application/json" \
-  -d '{"containerTag":"user_alex"}' | jq
+  -d '{"brandTag":"user_alex"}' | jq
 ```
 
 Implemented modules: `lib/memory/*`, routes under `app/api/v3/*`, Trigger tasks in `trigger/`.

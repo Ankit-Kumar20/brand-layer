@@ -1,6 +1,6 @@
 import {
   requireApiAuth,
-  resolveContainerTag,
+  resolveBrandTag,
 } from "@/lib/auth-request";
 import { memoryError, memoryLog } from "@/lib/memory/log";
 import { SearchSchema } from "@/lib/memory/schemas";
@@ -21,20 +21,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const containerTag = await resolveContainerTag(
+    const brandTag = await resolveBrandTag(
       auth,
-      parsed.data.containerTag,
+      parsed.data.brandTag,
     );
 
     memoryLog("api", "POST /v3/search", {
-      containerTag,
+      brandTag,
       mode: parsed.data.searchMode,
       q: parsed.data.q.slice(0, 80),
     });
 
     const result = await searchMemoriesAndDocuments(auth.userId, {
       ...parsed.data,
-      containerTag,
+      brandTag,
     });
     memoryLog("api", "POST /v3/search ok", { total: result.total });
     return Response.json(result);

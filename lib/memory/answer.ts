@@ -5,17 +5,17 @@ import { searchMemoriesAndDocuments } from "./search";
 
 export async function answerBrandQuestion(
   userId: string,
-  input: AnswerInput & { containerTag: string },
+  input: AnswerInput & { brandTag: string },
 ) {
   const started = Date.now();
   memoryLog("L8", "answer start", {
-    containerTag: input.containerTag,
+    brandTag: input.brandTag,
     q: input.q.slice(0, 80),
   });
 
   const memorySearch = await searchMemoriesAndDocuments(userId, {
     q: input.q,
-    containerTag: input.containerTag,
+    brandTag: input.brandTag,
     searchMode: "memories",
     limit: input.limit,
     threshold: input.threshold,
@@ -28,7 +28,7 @@ export async function answerBrandQuestion(
   if (input.includeChunks) {
     const docSearch = await searchMemoriesAndDocuments(userId, {
       q: input.q,
-      containerTag: input.containerTag,
+      brandTag: input.brandTag,
       searchMode: "documents",
       limit: Math.min(3, input.limit),
       threshold: input.threshold,

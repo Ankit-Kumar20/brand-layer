@@ -10,14 +10,14 @@ import {
 } from "@/lib/playground/api-client";
 import { JsonViewer } from "./JsonViewer";
 
-export function ProfilePanel({ containerTag }: { containerTag: string }) {
+export function ProfilePanel({ brandTag }: { brandTag: string }) {
   const [includeSearch, setIncludeSearch] = useState(false);
   const [q, setQ] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ProfileResponse | null>(null);
 
-  const disabled = !containerTag.trim();
+  const disabled = !brandTag.trim();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,7 +27,7 @@ export function ProfilePanel({ containerTag }: { containerTag: string }) {
     startTransition(async () => {
       try {
         const res = await getProfile({
-          containerTag: containerTag.trim(),
+          brandTag: brandTag.trim(),
           includeSearch,
           q: includeSearch && q.trim() ? q.trim() : undefined,
         });

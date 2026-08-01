@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { documents } from "@/db/schema";
 import {
   requireApiAuth,
-  resolveContainerTag,
+  resolveBrandTag,
 } from "@/lib/auth-request";
 import { contentHash } from "@/lib/memory/hash";
 import { enqueueIngestJob } from "@/lib/memory/jobs";
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     }
 
     const input = parsed.data;
-    const containerTag = await resolveContainerTag(auth, input.containerTag);
+    const brandTag = await resolveBrandTag(auth, input.brandTag);
     const type = resolveDocumentType(input);
     const metadata = defaultMetadata(type, input.metadata);
 
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     const hash = contentHash(hashSource);
 
     memoryLog("api", "POST /v3/documents", {
-      containerTag,
+      brandTag,
       customId: input.customId,
       taskType: input.taskType,
       dreaming: input.dreaming,
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       const existing = await db.query.documents.findFirst({
         where: and(
           eq(documents.userId, auth.userId),
-          eq(documents.containerTag, containerTag),
+          eq(documents.brandTag, brandTag),
           eq(documents.customId, input.customId),
         ),
       });
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
         await db.insert(documents).values({
           id: documentId,
           userId: auth.userId,
-          containerTag,
+          brandTag,
           customId: input.customId,
           content: storedContent,
           url: input.url ?? null,
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
       await db.insert(documents).values({
         id: documentId,
         userId: auth.userId,
-        containerTag,
+        brandTag,
         content: storedContent,
         url: input.url ?? null,
         contentHash: hash,
@@ -166,7 +166,7 @@ export async function POST(request: Request) {
     const runId = await enqueueIngestJob(documentId, { contentHash: hash });
     memoryLog("api", "ingest triggered", { documentId, runId });
 
-    return Response.json({ id: documentId, status: "queued", containerTag, type });
+    return Response.json({ id: documentId, status: "queued", brandTag, type });
   } catch (err) {
     if (err instanceof Response) return err;
     memoryError("api", "POST /v3/documents error", {

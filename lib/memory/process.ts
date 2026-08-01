@@ -33,7 +33,7 @@ export async function processIngestJob(documentId: string) {
   const started = Date.now();
   memoryLog("L1", "ingest start", {
     documentId,
-    containerTag: doc.containerTag,
+    brandTag: doc.brandTag,
     taskType: doc.taskType,
     dreaming: doc.dreaming,
     type: doc.type,
@@ -131,7 +131,7 @@ export async function processIngestJob(documentId: string) {
         const dreamRunId = await enqueueDreamJob({
           documentId,
           userId: doc.userId,
-          containerTag: doc.containerTag,
+          brandTag: doc.brandTag,
           mode: "instant",
         });
         memoryLog("L6", "dream enqueued (instant)", {
@@ -142,7 +142,7 @@ export async function processIngestJob(documentId: string) {
         const dreamRunId = await enqueueDreamJob({
           documentId,
           userId: doc.userId,
-          containerTag: doc.containerTag,
+          brandTag: doc.brandTag,
           delayMs: 2_000,
           coalesce: true,
           mode: "dynamic",

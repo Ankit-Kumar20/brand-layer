@@ -11,7 +11,7 @@ import {
 } from "@/lib/playground/api-client";
 import { JsonViewer } from "./JsonViewer";
 
-export function SearchPanel({ containerTag }: { containerTag: string }) {
+export function SearchPanel({ brandTag }: { brandTag: string }) {
   const [mode, setMode] = useState<"search" | "answer">("answer");
   const [q, setQ] = useState("What’s our brand voice?");
   const [searchMode, setSearchMode] = useState<
@@ -26,7 +26,7 @@ export function SearchPanel({ containerTag }: { containerTag: string }) {
   const [data, setData] = useState<SearchResponse | null>(null);
   const [answerData, setAnswerData] = useState<AnswerResponse | null>(null);
 
-  const disabled = !containerTag.trim() || !q.trim();
+  const disabled = !brandTag.trim() || !q.trim();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,7 +42,7 @@ export function SearchPanel({ containerTag }: { containerTag: string }) {
         if (mode === "answer") {
           const res = await answer({
             q: q.trim(),
-            containerTag: containerTag.trim(),
+            brandTag: brandTag.trim(),
             limit,
             threshold,
             includeChunks: true,
@@ -53,7 +53,7 @@ export function SearchPanel({ containerTag }: { containerTag: string }) {
         } else {
           const res = await search({
             q: q.trim(),
-            containerTag: containerTag.trim(),
+            brandTag: brandTag.trim(),
             searchMode,
             limit,
             threshold,

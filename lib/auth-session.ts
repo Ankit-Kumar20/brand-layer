@@ -19,7 +19,7 @@ export type BrandRow = {
   id: string;
   name: string;
   slug: string;
-  containerTag: string;
+  brandTag: string;
   userId: string;
 };
 
@@ -40,14 +40,14 @@ function toBrandRow(row: {
   id: string;
   name: string;
   slug: string;
-  containerTag: string;
+  brandTag: string;
   userId: string;
 }): BrandRow {
   return {
     id: row.id,
     name: row.name,
     slug: row.slug,
-    containerTag: row.containerTag,
+    brandTag: row.brandTag,
     userId: row.userId,
   };
 }
@@ -88,7 +88,7 @@ export async function listUserBrands(userId: string): Promise<BrandRow[]> {
       id: brands.id,
       name: brands.name,
       slug: brands.slug,
-      containerTag: brands.containerTag,
+      brandTag: brands.brandTag,
       userId: brands.userId,
     })
     .from(brands)
@@ -106,7 +106,7 @@ export async function getBrandIfOwner(
       id: brands.id,
       name: brands.name,
       slug: brands.slug,
-      containerTag: brands.containerTag,
+      brandTag: brands.brandTag,
       userId: brands.userId,
     })
     .from(brands)
@@ -119,49 +119,49 @@ export async function getBrandIfOwner(
 /** @deprecated Use getBrandIfOwner */
 export const getBrandIfMember = getBrandIfOwner;
 
-export async function getBrandByContainerTagIfOwner(
+export async function getBrandByBrandTagIfOwner(
   userId: string,
-  containerTag: string,
+  brandTag: string,
 ): Promise<BrandRow | null> {
   const rows = await db
     .select({
       id: brands.id,
       name: brands.name,
       slug: brands.slug,
-      containerTag: brands.containerTag,
+      brandTag: brands.brandTag,
       userId: brands.userId,
     })
     .from(brands)
     .where(
-      and(eq(brands.containerTag, containerTag), eq(brands.userId, userId)),
+      and(eq(brands.brandTag, brandTag), eq(brands.userId, userId)),
     )
     .limit(1);
 
   return rows[0] ? toBrandRow(rows[0]) : null;
 }
 
-/** @deprecated Use getBrandByContainerTagIfOwner */
-export const getBrandByContainerTagIfMember = getBrandByContainerTagIfOwner;
+/** @deprecated Use getBrandByBrandTagIfOwner */
+export const getBrandByBrandTagIfMember = getBrandByBrandTagIfOwner;
 
 /**
- * Resolve the caller's brand for a containerTag, or create one for this user.
+ * Resolve the caller's brand for a brandTag, or create one for this user.
  * Same tag may exist for other users — content stays isolated by user_id.
  * New brands always get a brand-scoped API key (encrypted at rest).
  */
-export async function ensureBrandForContainerTag(
+export async function ensureBrandForTag(
   userId: string,
-  containerTag: string,
+  brandTag: string,
   opts?: { name?: string },
 ): Promise<BrandRow | BrandWithApiKey> {
-  const tag = containerTag.trim();
+  const tag = brandTag.trim();
   if (!tag) {
     throw Response.json(
-      { error: "containerTag is required" },
+      { error: "brandTag is required" },
       { status: 400 },
     );
   }
 
-  const existing = await getBrandByContainerTagIfOwner(userId, tag);
+  const existing = await getBrandByBrandTagIfOwner(userId, tag);
   if (existing) return existing;
 
   const slug = slugify(tag.replace(/^brand_/, "") || tag) || nanoid(8);
@@ -173,7 +173,7 @@ export async function ensureBrandForContainerTag(
     userId,
     name: brandName,
     slug,
-    containerTag: tag,
+    brandTag: tag,
   });
 
   const apiKey = await createApiKey(userId, "default", brandId);
@@ -182,13 +182,13 @@ export async function ensureBrandForContainerTag(
     id: brandId,
     name: brandName,
     slug,
-    containerTag: tag,
+    brandTag: tag,
     userId,
     apiKey,
   };
 }
 
-/** Create a user-owned brand with a derived containerTag (+ API key). */
+/** Create a user-owned brand with a derived brandTag (+ API key). */
 export async function createUserBrand(
   userId: string,
   input: { name: string; slug?: string },
@@ -199,14 +199,14 @@ export async function createUserBrand(
   }
 
   const brandSlug = slugify(input.slug?.trim() || name) || nanoid(8);
-  const containerTag = `brand_${brandSlug}`;
+  const brandTag = `brand_${brandSlug}`;
 
   const taken = await db.query.brands.findFirst({
-    where: and(eq(brands.userId, userId), eq(brands.containerTag, containerTag)),
+    where: and(eq(brands.userId, userId), eq(brands.brandTag, brandTag)),
   });
   if (taken) {
     throw Response.json(
-      { error: "You already have a brand with this containerTag" },
+      { error: "You already have a brand with this brandTag" },
       { status: 409 },
     );
   }
@@ -217,7 +217,7 @@ export async function createUserBrand(
     userId,
     name,
     slug: brandSlug,
-    containerTag,
+    brandTag,
   });
 
   const apiKey = await createApiKey(userId, "default", brandId);
@@ -226,7 +226,7 @@ export async function createUserBrand(
     id: brandId,
     name,
     slug: brandSlug,
-    containerTag,
+    brandTag,
     userId,
     apiKey,
   };

@@ -11,7 +11,7 @@ The core is not a vector-database wrapper. It is two cooperating systems:
 | **Learning model** | Decides what to remember, what is important, when to forget, and how facts relate |
 | **Temporal vector-graph engine** | Stores learnings for search — facts with vectors, full-text search (FTS), and graph edges over time |
 
-One write produces three outputs in the same isolation boundary (`containerTag`):
+One write produces three outputs in the same isolation boundary (`brandTag`):
 
 1. **Document chunks** — source text for RAG / SuperRAG grounding  
 2. **Memories** — atomic facts in a living knowledge graph  
@@ -162,7 +162,7 @@ Search modes typically cover:
 
 ### User profiles
 
-Profiles are synthesized from memories in a `containerTag` — not a separate store you maintain by hand.
+Profiles are synthesized from memories in a `brandTag` — not a separate store you maintain by hand.
 
 | Slice | Source | Role |
 | --- | --- | --- |
@@ -178,7 +178,7 @@ Metadata filters on `profile()` narrow which memories contribute to the synthesi
 
 | Concept | Role |
 | --- | --- |
-| **`containerTag`** | Hard isolation boundary (user, tenant, project, agent) |
+| **`brandTag`** | Hard isolation boundary (user, tenant, project, agent) |
 | **Metadata** | Soft dimensions *inside* a tag for filtering |
 | **Scoped API keys** | Credentials that cannot cross a container |
 | **`customId`** | Stable document identity for re-ingest / session continuity |

@@ -52,7 +52,7 @@ export async function GET(
     if (!reveal) {
       return Response.json({
         brandId: brand.id,
-        containerTag: brand.containerTag,
+        brandTag: brand.brandTag,
         keys: listed,
       });
     }
@@ -66,7 +66,7 @@ export async function GET(
 
     return Response.json({
       brandId: brand.id,
-      containerTag: brand.containerTag,
+      brandTag: brand.brandTag,
       keys: listed,
       revealed: revealed
         ? {
@@ -126,7 +126,7 @@ export async function POST(
       prefix: key.prefix,
       userId: user.id,
       brandId: brand.id,
-      containerTag: brand.containerTag,
+      brandTag: brand.brandTag,
       created: key.created,
       recoverable: true,
       warning:

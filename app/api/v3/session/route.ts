@@ -18,15 +18,15 @@ export async function GET(request: Request) {
       );
     }
 
-    let containerTag: string | null = null;
+    let brandTag: string | null = null;
     if (verified.brandId) {
       try {
         const brand = await db.query.brands.findFirst({
           where: eq(brands.id, verified.brandId),
         });
-        containerTag = brand?.containerTag ?? null;
+        brandTag = brand?.brandTag ?? null;
       } catch {
-        containerTag = null;
+        brandTag = null;
       }
     }
 
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     memoryLog("api", "GET /v3/session", {
       userId: verified.userId,
       brandId: verified.brandId,
-      containerTag,
+      brandTag,
     });
 
     return Response.json({
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
         name,
       },
       brandId: verified.brandId,
-      containerTag,
+      brandTag,
       keyId: verified.keyId,
     });
   } catch (err) {

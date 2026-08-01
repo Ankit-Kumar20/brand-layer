@@ -33,7 +33,7 @@ export async function enqueueIngestJob(
 export async function enqueueDreamJob(opts: {
   documentId?: string;
   userId: string;
-  containerTag: string;
+  brandTag: string;
   delayMs?: number;
   coalesce?: boolean;
   mode?: "instant" | "dynamic";
@@ -43,7 +43,7 @@ export async function enqueueDreamJob(opts: {
   const payload = {
     documentId: opts.documentId,
     userId: opts.userId,
-    containerTag: opts.containerTag,
+    brandTag: opts.brandTag,
     mode,
   };
 
@@ -51,7 +51,7 @@ export async function enqueueDreamJob(opts: {
     opts.coalesce || mode === "dynamic"
       ? {
           debounce: {
-            key: `${opts.userId}:${opts.containerTag}`,
+            key: `${opts.userId}:${opts.brandTag}`,
             delay: delayFromMs(opts.delayMs ?? 2000),
             mode: "trailing" as const,
           },
@@ -69,7 +69,7 @@ export async function enqueueDreamJob(opts: {
   memoryLog("job", "enqueue dream", {
     runId: handle.id,
     documentId: opts.documentId,
-    containerTag: opts.containerTag,
+    brandTag: opts.brandTag,
     mode,
     delayMs: opts.delayMs ?? 0,
     coalesce: Boolean(opts.coalesce),

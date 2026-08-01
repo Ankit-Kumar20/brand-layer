@@ -1,13 +1,13 @@
-const TAG = "brand-layer.containerTag";
+const TAG = "brand-layer.brandTag";
 const BRAND = "brand-layer.brandId";
 const DOC = "brand-layer.lastDocumentId";
 
-export function loadContainerTag(): string {
+export function loadBrandTag(): string {
   if (typeof window === "undefined") return "";
   return localStorage.getItem(TAG) ?? "";
 }
 
-export function saveContainerTag(value: string) {
+export function saveBrandTag(value: string) {
   if (value) localStorage.setItem(TAG, value);
   else localStorage.removeItem(TAG);
 }

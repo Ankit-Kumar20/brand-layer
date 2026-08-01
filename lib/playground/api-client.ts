@@ -65,7 +65,7 @@ export type DocumentAddBody = {
   url?: string;
   pdfBase64?: string;
   kind?: IngestKind;
-  containerTag: string;
+  brandTag: string;
   customId?: string;
   metadata?: Record<string, string | number | boolean>;
   taskType?: "memory" | "superrag";
@@ -75,7 +75,7 @@ export type DocumentAddBody = {
 export type DocumentStatus = {
   id: string;
   customId: string | null;
-  containerTag: string;
+  brandTag: string;
   status: string;
   type: string;
   taskType: string;
@@ -144,7 +144,7 @@ export type BrandFilters = {
 };
 
 export function addDocument(body: DocumentAddBody) {
-  return request<{ id: string; status: string; containerTag?: string; type?: string }>(
+  return request<{ id: string; status: string; brandTag?: string; type?: string }>(
     "/v3/documents",
     { body },
   );
@@ -156,7 +156,7 @@ export function getDocument(id: string) {
 
 export function search(body: {
   q: string;
-  containerTag: string;
+  brandTag: string;
   searchMode?: "memories" | "documents" | "hybrid";
   limit?: number;
   threshold?: number;
@@ -167,7 +167,7 @@ export function search(body: {
 }
 
 export function getProfile(body: {
-  containerTag: string;
+  brandTag: string;
   q?: string;
   includeSearch?: boolean;
 }) {
@@ -176,7 +176,7 @@ export function getProfile(body: {
 
 export function answer(body: {
   q: string;
-  containerTag: string;
+  brandTag: string;
   limit?: number;
   threshold?: number;
   includeChunks?: boolean;

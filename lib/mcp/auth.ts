@@ -7,7 +7,7 @@ export type McpSession = {
   userId: string;
   keyId: string;
   brandId: string | null;
-  containerTag: string | null;
+  brandTag: string | null;
   email?: string;
   name?: string;
   apiKey: string;
@@ -25,15 +25,15 @@ export async function resolveMcpSession(
   const verified = await verifyApiKey(`Bearer ${bearerToken}`);
   if (!verified) return null;
 
-  let containerTag: string | null = null;
+  let brandTag: string | null = null;
   if (verified.brandId) {
     try {
       const brand = await db.query.brands.findFirst({
         where: eq(brands.id, verified.brandId),
       });
-      containerTag = brand?.containerTag ?? null;
+      brandTag = brand?.brandTag ?? null;
     } catch {
-      containerTag = null;
+      brandTag = null;
     }
   }
 
@@ -53,21 +53,21 @@ export async function resolveMcpSession(
     userId: verified.userId,
     keyId: verified.keyId,
     brandId: verified.brandId,
-    containerTag,
+    brandTag,
     email,
     name,
     apiKey: bearerToken,
   };
 }
 
-export function requireContainerTag(
+export function requireBrandTag(
   session: McpSession,
   override?: string,
 ): string {
-  const tag = override?.trim() || session.containerTag;
+  const tag = override?.trim() || session.brandTag;
   if (!tag) {
     throw new Error(
-      "containerTag is required — use a brand-scoped API key or pass containerTag.",
+      "brandTag is required — use a brand-scoped API key or pass brandTag.",
     );
   }
   return tag;

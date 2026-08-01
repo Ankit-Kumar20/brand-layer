@@ -99,7 +99,7 @@ export const brands = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
-    containerTag: text("container_tag").notNull(),
+    brandTag: text("brand_tag").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -109,9 +109,9 @@ export const brands = pgTable(
   (table) => [
     index("brands_user_idx").on(table.userId),
     uniqueIndex("brands_user_slug_uidx").on(table.userId, table.slug),
-    uniqueIndex("brands_user_container_uidx").on(
+    uniqueIndex("brands_user_brand_tag_uidx").on(
       table.userId,
-      table.containerTag,
+      table.brandTag,
     ),
   ],
 );
@@ -147,7 +147,7 @@ export const documents = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    containerTag: text("container_tag").notNull(),
+    brandTag: text("brand_tag").notNull(),
     customId: text("custom_id"),
     contentHash: text("content_hash"),
     content: text("content"),
@@ -168,9 +168,9 @@ export const documents = pgTable(
       .notNull(),
   },
   (table) => [
-    index("documents_user_container_idx").on(table.userId, table.containerTag),
+    index("documents_user_brand_tag_idx").on(table.userId, table.brandTag),
     uniqueIndex("documents_custom_id_uidx")
-      .on(table.userId, table.containerTag, table.customId)
+      .on(table.userId, table.brandTag, table.customId)
       .where(sql`${table.customId} is not null`),
   ],
 );
@@ -205,7 +205,7 @@ export const memories = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    containerTag: text("container_tag").notNull(),
+    brandTag: text("brand_tag").notNull(),
     memory: text("memory").notNull(),
     isStatic: boolean("is_static").notNull().default(false),
     isLatest: boolean("is_latest").notNull().default(true),
@@ -225,10 +225,10 @@ export const memories = pgTable(
       .notNull(),
   },
   (table) => [
-    index("memories_user_container_idx").on(table.userId, table.containerTag),
+    index("memories_user_brand_tag_idx").on(table.userId, table.brandTag),
     index("memories_latest_idx").on(
       table.userId,
-      table.containerTag,
+      table.brandTag,
       table.isLatest,
       table.isForgotten,
     ),
@@ -283,7 +283,7 @@ export const profiles = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    containerTag: text("container_tag").notNull(),
+    brandTag: text("brand_tag").notNull(),
     staticFacts: jsonb("static_facts").$type<string[]>().notNull().default([]),
     dynamicFacts: jsonb("dynamic_facts").$type<string[]>().notNull().default([]),
     updatedAt: timestamp("updated_at")
@@ -292,7 +292,7 @@ export const profiles = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex("profiles_user_container_uidx").on(table.userId, table.containerTag),
+    uniqueIndex("profiles_user_brand_tag_uidx").on(table.userId, table.brandTag),
   ],
 );
 
@@ -305,7 +305,7 @@ export const jobs = pgTable(
       onDelete: "cascade",
     }),
     userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
-    containerTag: text("container_tag"),
+    brandTag: text("brand_tag"),
     payload: jsonb("payload").$type<Record<string, unknown>>(),
     status: text("status").notNull().default("pending"),
     attempts: integer("attempts").notNull().default(0),

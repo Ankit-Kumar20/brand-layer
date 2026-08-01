@@ -81,11 +81,11 @@ function customIdFromFilename(name: string, fallback: string) {
 }
 
 export function IngestPanel({
-  containerTag,
+  brandTag,
   documentId,
   onDocumentId,
 }: {
-  containerTag: string;
+  brandTag: string;
   documentId: string;
   onDocumentId: (id: string) => void;
 }) {
@@ -102,7 +102,7 @@ export function IngestPanel({
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<unknown>();
 
-  const disabled = !containerTag.trim();
+  const disabled = !brandTag.trim();
   const textFileAccept = TEXT_FILE_ACCEPT[kind];
 
   function applyKind(next: IngestKind) {
@@ -179,7 +179,7 @@ export function IngestPanel({
       try {
         const body = {
           kind,
-          containerTag: containerTag.trim(),
+          brandTag: brandTag.trim(),
           customId: customId.trim() || undefined,
           taskType,
           dreaming,

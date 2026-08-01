@@ -2,11 +2,11 @@
 
 What each control in the brand-layer playground does, and how it affects ingest, search, answer, and profile.
 
-The playground talks to `/v3/*`. Isolation is by **brandId / containerTag** at the top of the page — every write and read is scoped to that tag.
+The playground talks to `/v3/*`. Isolation is by **brandId / brandTag** at the top of the page — every write and read is scoped to that tag.
 
 ---
 
-## Shared: brandId / containerTag
+## Shared: brandId / brandTag
 
 | | |
 | --- | --- |
@@ -46,7 +46,7 @@ The actual payload. At least one of content, url, or PDF is required.
 
 ### customId
 
-Stable document identity **inside** the current `containerTag`.
+Stable document identity **inside** the current `brandTag`.
 
 | | Behavior |
 | --- | --- |
@@ -109,7 +109,7 @@ Invalid JSON blocks ingest in the UI.
 
 ## Search / Answer (`POST /v3/search` or `POST /v3/answer`)
 
-Read path over the same `containerTag`.
+Read path over the same `brandTag`.
 
 ### Mode: Answer vs Search
 
@@ -176,7 +176,7 @@ Answer mode always requests chunk citations in the playground (`includeChunks: t
 
 ## Brand profile (`POST /v3/profile`)
 
-Always-on brand card synthesized from latest, non-forgotten memories in the `containerTag`.
+Always-on brand card synthesized from latest, non-forgotten memories in the `brandTag`.
 
 ### includeSearch
 

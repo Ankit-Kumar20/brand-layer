@@ -8,10 +8,10 @@ import { ProfilePanel } from "./ProfilePanel";
 import { SearchPanel } from "./SearchPanel";
 import {
   loadBrandId,
-  loadContainerTag,
+  loadBrandTag,
   loadLastDocumentId,
   saveBrandId,
-  saveContainerTag,
+  saveBrandTag,
   saveLastDocumentId,
 } from "@/lib/playground/storage";
 import { authClient } from "@/lib/auth-client";
@@ -20,7 +20,7 @@ export type PlaygroundBrand = {
   id: string;
   name: string;
   slug: string;
-  containerTag: string;
+  brandTag: string;
   userId: string;
 };
 
@@ -31,7 +31,7 @@ type PlaygroundProps = {
 export function Playground({ user }: PlaygroundProps) {
   const [brands, setBrands] = useState<PlaygroundBrand[]>([]);
   const [brandId, setBrandId] = useState("");
-  const [containerTag, setContainerTag] = useState("");
+  const [brandTag, setBrandTag] = useState("");
   const [documentId, setDocumentId] = useState("");
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -63,18 +63,18 @@ export function Playground({ user }: PlaygroundProps) {
         setBrands(list);
 
         const savedBrandId = loadBrandId();
-        const savedTag = loadContainerTag();
+        const savedTag = loadBrandTag();
         const match =
           list.find((b) => b.id === savedBrandId) ||
-          list.find((b) => b.containerTag === savedTag) ||
+          list.find((b) => b.brandTag === savedTag) ||
           list[0] ||
           null;
 
         if (match) {
           setBrandId(match.id);
-          setContainerTag(match.containerTag);
+          setBrandTag(match.brandTag);
           saveBrandId(match.id);
-          saveContainerTag(match.containerTag);
+          saveBrandTag(match.brandTag);
         }
         setDocumentId(loadLastDocumentId());
         setReady(true);
@@ -96,10 +96,10 @@ export function Playground({ user }: PlaygroundProps) {
     const brand = brands.find((b) => b.id === nextId);
     if (!brand) return;
     setBrandId(brand.id);
-    setContainerTag(brand.containerTag);
+    setBrandTag(brand.brandTag);
     setCreatedApiKey(null);
     saveBrandId(brand.id);
-    saveContainerTag(brand.containerTag);
+    saveBrandTag(brand.brandTag);
   }
 
   function createBrand() {
@@ -131,9 +131,9 @@ export function Playground({ user }: PlaygroundProps) {
         const list = await refreshBrands();
         setBrands(list);
         setBrandId(data.brand.id);
-        setContainerTag(data.brand.containerTag);
+        setBrandTag(data.brand.brandTag);
         saveBrandId(data.brand.id);
-        saveContainerTag(data.brand.containerTag);
+        saveBrandTag(data.brand.brandTag);
         setNewBrandName("");
         if (data.apiKey?.key) setCreatedApiKey(data.apiKey.key);
       } catch (err) {
@@ -202,7 +202,7 @@ export function Playground({ user }: PlaygroundProps) {
       <main className="mx-auto grid max-w-5xl gap-10 px-5 py-10 sm:px-8">
         <div className="panel space-y-4">
           <div className="space-y-1.5">
-            <span className="text-sm text-[var(--muted)]">Brand / containerTag</span>
+            <span className="text-sm text-[var(--muted)]">Brand / brandTag</span>
             {brands.length > 0 ? (
               <select
                 value={brandId}
@@ -211,18 +211,18 @@ export function Playground({ user }: PlaygroundProps) {
               >
                 {brands.map((b) => (
                   <option key={b.id} value={b.id}>
-                    {b.name} ({b.containerTag})
+                    {b.name} ({b.brandTag})
                   </option>
                 ))}
               </select>
             ) : (
               <p className="text-sm text-[var(--muted)]">
-                No brands yet — create one below to get a containerTag.
+                No brands yet — create one below to get a brandTag.
               </p>
             )}
             {selected ? (
               <p className="font-mono text-xs text-[var(--muted)]">
-                containerTag={selected.containerTag}
+                brandTag={selected.brandTag}
               </p>
             ) : null}
           </div>
@@ -269,11 +269,11 @@ export function Playground({ user }: PlaygroundProps) {
           ) : null}
         </div>
 
-        {containerTag ? (
+        {brandTag ? (
           <>
             <div className="panel">
               <IngestPanel
-                containerTag={containerTag}
+                brandTag={brandTag}
                 documentId={documentId}
                 onDocumentId={handleDocumentId}
               />
@@ -281,14 +281,14 @@ export function Playground({ user }: PlaygroundProps) {
 
             <div className="grid gap-10 lg:grid-cols-2">
               <div className="panel">
-                <SearchPanel containerTag={containerTag} />
+                <SearchPanel brandTag={brandTag} />
               </div>
               <div className="panel">
-                <ProfilePanel containerTag={containerTag} />
+                <ProfilePanel brandTag={brandTag} />
               </div>
             </div>
 
-            <McpConnectPanel containerTag={containerTag} />
+            <McpConnectPanel brandTag={brandTag} />
           </>
         ) : null}
       </main>

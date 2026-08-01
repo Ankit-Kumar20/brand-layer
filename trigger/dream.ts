@@ -11,7 +11,7 @@ export const dreamBatchTask = schemaTask({
   schema: z.object({
     documentId: z.string().optional(),
     userId: z.string(),
-    containerTag: z.string(),
+    brandTag: z.string(),
     mode: z.enum(["instant", "dynamic"]).default("dynamic"),
   }),
   retry: {
@@ -39,20 +39,20 @@ export const dreamBatchTask = schemaTask({
         });
         return { mode: "instant" as const, documentId: payload.documentId };
       }
-      await dreamBatch(payload.userId, payload.containerTag, payload.documentId);
+      await dreamBatch(payload.userId, payload.brandTag, payload.documentId);
     } else {
-      await dreamBatch(payload.userId, payload.containerTag);
+      await dreamBatch(payload.userId, payload.brandTag);
     }
 
     memoryLog("trigger", "dream-batch done (dynamic)", {
       userId: payload.userId,
-      containerTag: payload.containerTag,
+      brandTag: payload.brandTag,
       documentId: payload.documentId,
     });
     return {
       mode: "dynamic" as const,
       userId: payload.userId,
-      containerTag: payload.containerTag,
+      brandTag: payload.brandTag,
       documentId: payload.documentId,
     };
   },

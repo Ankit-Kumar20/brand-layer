@@ -27,7 +27,7 @@ Trigger.dev ingest + dream      ← must run for fresh facts
          ▼                                               │ Auth + CRUD
 ┌────────────────────────────────────────────────────────┴────────┐
 │                     Desin MCP Server                            │
-│  • Validate Bearer → session props (brandId, containerTag)      │
+│  • Validate Bearer → session props (brandId, brandTag)      │
 │  • Map tools → /v3/documents, /search, /profile, /answer        │
 │  • Format answers for agent context windows                     │
 └─────────────────────────────────────────────────────────────────┘
@@ -44,7 +44,7 @@ Trigger.dev ingest + dream      ← must run for fresh facts
 | `POST /v3/search` | Done |
 | `POST /v3/profile` (+ static/dynamic cards) | Done |
 | `POST /v3/answer` | Done (brand advantage vs Supermemory) |
-| Brand-scoped API keys (`sm_…` + forced `containerTag`) | Done |
+| Brand-scoped API keys (`sm_…` + forced `brandTag`) | Done |
 | `GET /v3/session` (key → user / brand / tag) | **Missing** |
 | Public forget API | **Missing** (dream-internal forget only) |
 | List documents/memories for agents | **Missing** (optional for v1) |
@@ -68,7 +68,7 @@ Trigger.dev ingest + dream      ← must run for fresh facts
 }
 ```
 
-- Prefer **brand-scoped keys** so `containerTag` is forced (same idea as Supermemory `x-sm-project`).
+- Prefer **brand-scoped keys** so `brandTag` is forced (same idea as Supermemory `x-sm-project`).
 - Never allow public/playground auth on remote MCP.
 - Tag MCP writes: `metadata.source: "mcp"` (or `desin_source: "mcp"`).
 
@@ -97,7 +97,7 @@ Do **not** clone Supermemory’s personal `memory` / `recall` names as the defau
 2. **`getBrandProfile`** (read) — static card (identity / assets / claims / restrictions) + dynamic (products / campaigns).
 3. **`ingest`** (write) — `content` or `url`, optional `customId`, `kind`, metadata. Returns document id + status.
 4. **`search`** (read, optional) — raw memories / hybrid when the agent wants facts, not prose.
-5. **`whoAmI`** — brand id, containerTag, key scope (debugging).
+5. **`whoAmI`** — brand id, brandTag, key scope (debugging).
 
 ### Optional prompt
 
@@ -130,7 +130,7 @@ apps/mcp/   (or packages/mcp)
 
 ### Phase 0 — Harden API
 
-1. Add `GET /v3/session` → `{ userId, brandId, containerTag }` for key validation.
+1. Add `GET /v3/session` → `{ userId, brandId, brandTag }` for key validation.
 2. Require Bearer on anything MCP will call in production.
 3. Prefer brand-scoped keys for Connect UX.
 4. Plan `POST /v3/memories/forget` (id or content) for a later `forget` tool.
@@ -138,7 +138,7 @@ apps/mcp/   (or packages/mcp)
 
 ### Phase 1 — MCP MVP (API key)
 
-1. Auth gate: Bearer → `/v3/session` → props `{ apiKey, brandId, containerTag }`.
+1. Auth gate: Bearer → `/v3/session` → props `{ apiKey, brandId, brandTag }`.
 2. Implement `brandContext`, `getBrandProfile`, `ingest`, `whoAmI`.
 3. Formatters that stay under agent context limits (answer first, then compact facts).
 4. Local Cursor config against `bun dev` + `bun run trigger:dev`.

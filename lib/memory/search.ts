@@ -68,7 +68,7 @@ function documentFilterSql(filters: SearchInput["filters"]) {
 
 async function searchMemories(
   userId: string,
-  containerTag: string,
+  brandTag: string,
   embedding: number[],
   q: string,
   limit: number,
@@ -86,7 +86,7 @@ async function searchMemories(
       (1 - (embedding <=> ${vec}))::float8 AS similarity
     FROM memories
     WHERE user_id = ${userId}
-      AND container_tag = ${containerTag}
+      AND brand_tag = ${brandTag}
       AND is_latest = true
       AND is_forgotten = false
       AND embedding IS NOT NULL
@@ -120,7 +120,7 @@ async function searchMemories(
 
 async function searchChunks(
   userId: string,
-  containerTag: string,
+  brandTag: string,
   embedding: number[],
   q: string,
   limit: number,
@@ -138,7 +138,7 @@ async function searchChunks(
     FROM chunks c
     INNER JOIN documents d ON d.id = c.document_id
     WHERE d.user_id = ${userId}
-      AND d.container_tag = ${containerTag}
+      AND d.brand_tag = ${brandTag}
       AND c.embedding IS NOT NULL
       AND (
         (1 - (c.embedding <=> ${vec})) >= ${threshold}
@@ -198,11 +198,11 @@ async function attachRelated(hits: SearchHit[]) {
 
 export async function searchMemoriesAndDocuments(
   userId: string,
-  input: SearchInput & { containerTag: string },
+  input: SearchInput & { brandTag: string },
 ) {
   const started = Date.now();
   memoryLog("L8", "search start", {
-    containerTag: input.containerTag,
+    brandTag: input.brandTag,
     mode: input.searchMode,
     q: input.q.slice(0, 80),
     limit: input.limit,
@@ -217,7 +217,7 @@ export async function searchMemoriesAndDocuments(
   if (input.searchMode === "memories" || input.searchMode === "hybrid") {
     const memHits = await searchMemories(
       userId,
-      input.containerTag,
+      input.brandTag,
       embedding,
       input.q,
       input.limit,
@@ -231,7 +231,7 @@ export async function searchMemoriesAndDocuments(
   if (input.searchMode === "documents" || input.searchMode === "hybrid") {
     const chunkHits = await searchChunks(
       userId,
-      input.containerTag,
+      input.brandTag,
       embedding,
       input.q,
       input.limit,

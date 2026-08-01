@@ -20,8 +20,8 @@ export async function GET(
     }
 
     if (
-      auth.forcedContainerTag &&
-      doc.containerTag !== auth.forcedContainerTag
+      auth.forcedBrandTag &&
+      doc.brandTag !== auth.forcedBrandTag
     ) {
       return Response.json({ error: "Not found" }, { status: 404 });
     }
@@ -29,7 +29,7 @@ export async function GET(
     return Response.json({
       id: doc.id,
       customId: doc.customId,
-      containerTag: doc.containerTag,
+      brandTag: doc.brandTag,
       status: doc.status,
       type: doc.type,
       taskType: doc.taskType,

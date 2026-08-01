@@ -32,7 +32,7 @@ Brand workspace (brandId)
 
 | Today (playground) | Brand system |
 | --- | --- |
-| `containerTag` ≈ user (`user_alex`) | `containerTag` / `brandId` ≈ brand workspace |
+| `brandTag` ≈ user (`user_alex`) | `brandTag` / `brandId` ≈ brand workspace |
 | Personal facts (“works at Stripe”) | Brand facts (“primary color is #…”, “never claim X”) |
 | One public user | Multi-tenant org → brands → API keys |
 

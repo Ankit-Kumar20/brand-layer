@@ -6,7 +6,7 @@ import { answerBrandQuestion } from "@/lib/memory/answer";
 import { getProfile } from "@/lib/memory/profile";
 import { searchMemoriesAndDocuments } from "@/lib/memory/search";
 import {
-  requireContainerTag,
+  requireBrandTag,
   type McpSession,
 } from "@/lib/mcp/auth";
 import {
@@ -45,13 +45,13 @@ function sessionFromExtra(extra: { authInfo?: AuthInfo }): McpSession {
   return session;
 }
 
-const containerTagField = {
-  containerTag: z
+const brandTagField = {
+  brandTag: z
     .string()
     .min(1)
     .max(128)
     .describe(
-      "Brand container tag. Prefer a brand-scoped API key so this is set automatically.",
+      "Brand tag. Prefer a brand-scoped API key so this is set automatically.",
     )
     .optional(),
 };
@@ -78,14 +78,14 @@ export function registerDesinMcpTools(server: McpServer) {
         market: z.string().min(1).optional(),
         product: z.string().min(1).optional(),
         isStatic: z.boolean().optional(),
-        ...containerTagField,
+        ...brandTagField,
       },
       annotations: READ_ONLY,
     },
     async (args, extra) => {
       try {
         const session = sessionFromExtra(extra);
-        const containerTag = requireContainerTag(session, args.containerTag);
+        const brandTag = requireBrandTag(session, args.brandTag);
         const filters = {
           category: args.category,
           assetType: args.assetType,
@@ -96,7 +96,7 @@ export function registerDesinMcpTools(server: McpServer) {
         const hasFilters = Object.values(filters).some((v) => v !== undefined);
         const result = await answerBrandQuestion(session.userId, {
           q: args.q,
-          containerTag,
+          brandTag,
           limit: 8,
           threshold: 0.25,
           includeChunks: true,
@@ -123,22 +123,22 @@ export function registerDesinMcpTools(server: McpServer) {
           .optional()
           .default(false)
           .describe("Include raw search hits alongside the profile cards"),
-        ...containerTagField,
+        ...brandTagField,
       },
       annotations: READ_ONLY,
     },
     async (args, extra) => {
       try {
         const session = sessionFromExtra(extra);
-        const containerTag = requireContainerTag(session, args.containerTag);
-        const profile = await getProfile(session.userId, containerTag);
+        const brandTag = requireBrandTag(session, args.brandTag);
+        const profile = await getProfile(session.userId, brandTag);
         let text = formatProfile({ profile });
         if (args.includeSearch && args.q) {
           const searchResults = await searchMemoriesAndDocuments(
             session.userId,
             {
               q: args.q,
-              containerTag,
+              brandTag,
               searchMode: "memories",
               limit: 10,
               threshold: 0.3,
@@ -181,7 +181,7 @@ export function registerDesinMcpTools(server: McpServer) {
           .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
           .optional(),
         dreaming: z.enum(["dynamic", "instant"]).optional().default("dynamic"),
-        ...containerTagField,
+        ...brandTagField,
       },
       annotations: WRITE,
     },
@@ -191,8 +191,8 @@ export function registerDesinMcpTools(server: McpServer) {
           return textResult("Either content or url is required", true);
         }
         const session = sessionFromExtra(extra);
-        const containerTag = requireContainerTag(session, args.containerTag);
-        const result = await queueDocumentIngest(session.userId, containerTag, {
+        const brandTag = requireBrandTag(session, args.brandTag);
+        const result = await queueDocumentIngest(session.userId, brandTag, {
           content: args.content,
           url: args.url,
           kind: args.kind,
@@ -239,14 +239,14 @@ export function registerDesinMcpTools(server: McpServer) {
         product: z.string().min(1).optional(),
         isStatic: z.boolean().optional(),
         source: z.string().min(1).optional(),
-        ...containerTagField,
+        ...brandTagField,
       },
       annotations: READ_ONLY,
     },
     async (args, extra) => {
       try {
         const session = sessionFromExtra(extra);
-        const containerTag = requireContainerTag(session, args.containerTag);
+        const brandTag = requireBrandTag(session, args.brandTag);
         const filters = {
           category: args.category,
           assetType: args.assetType,
@@ -258,7 +258,7 @@ export function registerDesinMcpTools(server: McpServer) {
         const hasFilters = Object.values(filters).some((v) => v !== undefined);
         const result = await searchMemoriesAndDocuments(session.userId, {
           q: args.q,
-          containerTag,
+          brandTag,
           searchMode: args.searchMode ?? "memories",
           limit: args.limit ?? 10,
           threshold: args.threshold ?? 0.3,
@@ -278,7 +278,7 @@ export function registerDesinMcpTools(server: McpServer) {
     "whoAmI",
     {
       description:
-        "Show the authenticated brand session: userId, brandId, containerTag.",
+        "Show the authenticated brand session: userId, brandId, brandTag.",
       inputSchema: {},
       annotations: READ_ONLY,
     },
@@ -292,7 +292,7 @@ export function registerDesinMcpTools(server: McpServer) {
               email: session.email,
               name: session.name,
               brandId: session.brandId,
-              containerTag: session.containerTag,
+              brandTag: session.brandTag,
               keyId: session.keyId,
             },
             null,
@@ -314,8 +314,8 @@ export function registerDesinMcpTools(server: McpServer) {
     async (_uri, extra) => {
       try {
         const session = sessionFromExtra(extra);
-        const containerTag = requireContainerTag(session);
-        const profile = await getProfile(session.userId, containerTag);
+        const brandTag = requireBrandTag(session);
+        const profile = await getProfile(session.userId, brandTag);
         return {
           contents: [
             {
@@ -350,8 +350,8 @@ export function registerDesinMcpTools(server: McpServer) {
     async (_args, extra) => {
       try {
         const session = sessionFromExtra(extra);
-        const containerTag = requireContainerTag(session);
-        const profile = await getProfile(session.userId, containerTag);
+        const brandTag = requireBrandTag(session);
+        const profile = await getProfile(session.userId, brandTag);
         const profileText = formatProfile({ profile });
         const text = [
           "**Important:** Before writing copy or designing UI for this brand, call `brandContext` for voice, colors, claims, and restrictions. Use `getBrandProfile` for the full kit cards. Use `ingest` when the user updates guidelines.",
