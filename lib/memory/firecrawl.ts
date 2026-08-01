@@ -1,5 +1,5 @@
 import Firecrawl from "firecrawl";
-import type { BrandingProfile } from "firecrawl";
+import type { BrandingProfile, DocumentMetadata } from "firecrawl";
 import { memoryLog, memoryWarn } from "./log";
 
 /** Cap huge data: URIs (inline SVG logos) so ingest stays tractable. */
@@ -83,14 +83,27 @@ export function formatBrandingProfile(branding: BrandingProfile): string {
   return lines.length > 1 ? lines.join("\n") : "";
 }
 
+export type FirecrawlScrapeResult = {
+  rawText: string;
+  markdown: string;
+  branding: BrandingProfile | null;
+  metadata: {
+    title?: string;
+    ogTitle?: string;
+    ogSiteName?: string;
+    description?: string;
+    sourceURL?: string;
+  };
+};
+
 /**
  * Scrape a URL to clean markdown + brand identity via Firecrawl when
  * FIRECRAWL_API_KEY is set. Returns null when the key is missing (caller
  * should use the plain fetch path).
  */
-export async function scrapeUrlWithFirecrawl(
+export async function scrapeUrlStructured(
   url: string,
-): Promise<string | null> {
+): Promise<FirecrawlScrapeResult | null> {
   const apiKey = process.env.FIRECRAWL_API_KEY?.trim();
   if (!apiKey) {
     memoryLog("L2", "firecrawl unavailable", {
@@ -107,9 +120,9 @@ export async function scrapeUrlWithFirecrawl(
   });
 
   const markdown = doc.markdown?.trim() ?? "";
-  const brandingText = doc.branding
-    ? formatBrandingProfile(doc.branding)
-    : "";
+  const branding = doc.branding ?? null;
+  const brandingText = branding ? formatBrandingProfile(branding) : "";
+  const meta = (doc.metadata ?? {}) as DocumentMetadata;
 
   if (!markdown && !brandingText) {
     memoryWarn("L2", "firecrawl empty markdown+branding", { url });
@@ -122,13 +135,37 @@ export async function scrapeUrlWithFirecrawl(
   ].filter(Boolean) as string[];
 
   const rawText = parts.join("\n\n");
+  const metadata = {
+    title: typeof meta.title === "string" ? meta.title : undefined,
+    ogTitle: typeof meta.ogTitle === "string" ? meta.ogTitle : undefined,
+    ogSiteName:
+      typeof meta.ogSiteName === "string" ? meta.ogSiteName : undefined,
+    description:
+      typeof meta.description === "string" ? meta.description : undefined,
+    sourceURL:
+      typeof meta.sourceURL === "string" ? meta.sourceURL : url,
+  };
 
   memoryLog("L2", "firecrawl scrape done", {
     url,
     chars: rawText.length,
     hasMarkdown: Boolean(markdown),
     hasBranding: Boolean(brandingText),
-    title: doc.metadata?.title,
+    title: metadata.title,
+    ogSiteName: metadata.ogSiteName,
   });
-  return rawText;
+
+  return { rawText, markdown, branding, metadata };
+}
+
+/**
+ * Scrape a URL to clean markdown + brand identity via Firecrawl when
+ * FIRECRAWL_API_KEY is set. Returns null when the key is missing (caller
+ * should use the plain fetch path).
+ */
+export async function scrapeUrlWithFirecrawl(
+  url: string,
+): Promise<string | null> {
+  const result = await scrapeUrlStructured(url);
+  return result?.rawText ?? null;
 }

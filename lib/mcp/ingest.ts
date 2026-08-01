@@ -35,7 +35,7 @@ function defaultMetadata(
       base.source = "brand_tokens";
       if (!base.category) base.category = "assets";
       if (!base.assetType) base.assetType = "color";
-    } else if (type === "webpage") {
+    } else if (type === "webpage" || type === "url") {
       base.source = "web";
       if (!base.category) base.category = "products";
     } else if (type === "svg_asset") {

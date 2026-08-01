@@ -15,6 +15,7 @@ import {
   saveLastDocumentId,
 } from "@/lib/playground/storage";
 import { authClient } from "@/lib/auth-client";
+import { normalizeWebsiteUrl } from "@/lib/brand/url";
 
 export type PlaygroundBrand = {
   id: string;
@@ -36,8 +37,12 @@ export function Playground({ user }: PlaygroundProps) {
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [newBrandName, setNewBrandName] = useState("");
+  const [newBrandUrl, setNewBrandUrl] = useState("");
   const [pending, startTransition] = useTransition();
   const [createdApiKey, setCreatedApiKey] = useState<string | null>(null);
+  const [resolvedFromUrl, setResolvedFromUrl] = useState<string | null>(null);
+
+  const urlValid = Boolean(normalizeWebsiteUrl(newBrandUrl));
 
   const selected = brands.find((b) => b.id === brandId) ?? null;
 
@@ -98,8 +103,75 @@ export function Playground({ user }: PlaygroundProps) {
     setBrandId(brand.id);
     setBrandTag(brand.brandTag);
     setCreatedApiKey(null);
+    setResolvedFromUrl(null);
     saveBrandId(brand.id);
     saveBrandTag(brand.brandTag);
+  }
+
+  function applyCreatedBrand(
+    brand: PlaygroundBrand,
+    apiKey?: string,
+    queuedDocumentId?: string,
+    resolvedName?: string,
+  ) {
+    setBrandId(brand.id);
+    setBrandTag(brand.brandTag);
+    saveBrandId(brand.id);
+    saveBrandTag(brand.brandTag);
+    if (apiKey) setCreatedApiKey(apiKey);
+    if (queuedDocumentId) {
+      setDocumentId(queuedDocumentId);
+      saveLastDocumentId(queuedDocumentId);
+    }
+    if (resolvedName) setResolvedFromUrl(resolvedName);
+  }
+
+  function createBrandFromUrl() {
+    const url = newBrandUrl.trim();
+    if (!normalizeWebsiteUrl(url)) return;
+    setLoadError(null);
+    setCreatedApiKey(null);
+    setResolvedFromUrl(null);
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/brands/from-url", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            url,
+            name: newBrandName.trim() || undefined,
+          }),
+        });
+        const data = (await res.json()) as {
+          brand?: PlaygroundBrand;
+          apiKey?: { key?: string };
+          documentId?: string;
+          resolvedName?: string;
+          error?: string;
+          detail?: string;
+        };
+        if (!res.ok || !data.brand) {
+          setLoadError(data.detail || data.error || `HTTP ${res.status}`);
+          return;
+        }
+        const list = await refreshBrands();
+        setBrands(list);
+        applyCreatedBrand(
+          data.brand,
+          data.apiKey?.key,
+          data.documentId,
+          data.resolvedName,
+        );
+        setNewBrandUrl("");
+        setNewBrandName("");
+      } catch (err) {
+        setLoadError(err instanceof Error ? err.message : "Create from URL failed");
+      }
+    });
   }
 
   function createBrand() {
@@ -107,6 +179,7 @@ export function Playground({ user }: PlaygroundProps) {
     if (!name) return;
     setLoadError(null);
     setCreatedApiKey(null);
+    setResolvedFromUrl(null);
     startTransition(async () => {
       try {
         const res = await fetch("/api/brands", {
@@ -130,12 +203,8 @@ export function Playground({ user }: PlaygroundProps) {
         }
         const list = await refreshBrands();
         setBrands(list);
-        setBrandId(data.brand.id);
-        setBrandTag(data.brand.brandTag);
-        saveBrandId(data.brand.id);
-        saveBrandTag(data.brand.brandTag);
+        applyCreatedBrand(data.brand, data.apiKey?.key);
         setNewBrandName("");
-        if (data.apiKey?.key) setCreatedApiKey(data.apiKey.key);
       } catch (err) {
         setLoadError(err instanceof Error ? err.message : "Create failed");
       }
@@ -227,26 +296,65 @@ export function Playground({ user }: PlaygroundProps) {
             ) : null}
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <label className="block flex-1 space-y-1.5">
-              <span className="text-sm text-[var(--muted)]">Create brand</span>
-              <input
-                type="text"
-                value={newBrandName}
-                onChange={(e) => setNewBrandName(e.target.value)}
-                placeholder="Trybloom"
-                className="field text-sm"
-              />
-            </label>
-            <button
-              type="button"
-              disabled={pending || !newBrandName.trim()}
-              onClick={createBrand}
-              className="rounded border border-[var(--line)] px-4 py-2 text-sm text-[var(--ink)] hover:bg-[var(--bg)] disabled:opacity-50"
-            >
-              {pending ? "Creating…" : "Create"}
-            </button>
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <label className="block flex-1 space-y-1.5">
+                <span className="text-sm text-[var(--muted)]">
+                  Create from website URL
+                </span>
+                <input
+                  type="text"
+                  value={newBrandUrl}
+                  onChange={(e) => setNewBrandUrl(e.target.value)}
+                  placeholder="https://stripe.com"
+                  className="field text-sm"
+                />
+              </label>
+              <button
+                type="button"
+                disabled={pending || !urlValid}
+                onClick={createBrandFromUrl}
+                className="rounded border border-[var(--line)] px-4 py-2 text-sm text-[var(--ink)] hover:bg-[var(--bg)] disabled:opacity-50"
+              >
+                {pending ? "Working…" : "Scan & create"}
+              </button>
+            </div>
+            <p className="text-xs text-[var(--muted)]">
+              Firecrawl scrapes the page, resolves the brand name, creates the
+              brand, and queues homepage ingest. Optional name override below.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <label className="block flex-1 space-y-1.5">
+                <span className="text-sm text-[var(--muted)]">
+                  Name (optional override, or create by name alone)
+                </span>
+                <input
+                  type="text"
+                  value={newBrandName}
+                  onChange={(e) => setNewBrandName(e.target.value)}
+                  placeholder="Trybloom"
+                  className="field text-sm"
+                />
+              </label>
+              <button
+                type="button"
+                disabled={pending || !newBrandName.trim()}
+                onClick={createBrand}
+                className="rounded border border-[var(--line)] px-4 py-2 text-sm text-[var(--ink)] hover:bg-[var(--bg)] disabled:opacity-50"
+              >
+                {pending ? "Working…" : "Create by name"}
+              </button>
+            </div>
           </div>
+
+          {resolvedFromUrl ? (
+            <p className="text-sm text-[var(--muted)]">
+              Resolved name:{" "}
+              <span className="font-medium text-[var(--ink)]">
+                {resolvedFromUrl}
+              </span>
+            </p>
+          ) : null}
 
           {createdApiKey ? (
             <div className="space-y-1.5 rounded border border-[var(--line)] bg-[var(--bg)] p-3">
