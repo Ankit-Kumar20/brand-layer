@@ -92,7 +92,12 @@ export async function scrapeUrlWithFirecrawl(
   url: string,
 ): Promise<string | null> {
   const apiKey = process.env.FIRECRAWL_API_KEY?.trim();
-  if (!apiKey) return null;
+  if (!apiKey) {
+    memoryLog("L2", "firecrawl unavailable", {
+      reason: "missing_FIRECRAWL_API_KEY",
+    });
+    return null;
+  }
 
   memoryLog("L2", "firecrawl scrape start", { url });
   const app = new Firecrawl({ apiKey });

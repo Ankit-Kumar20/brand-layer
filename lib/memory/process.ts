@@ -31,6 +31,7 @@ export async function processIngestJob(documentId: string) {
   if (!doc) throw new Error(`Document ${documentId} not found`);
 
   const started = Date.now();
+  let extractor: string | undefined;
   memoryLog("L1", "ingest start", {
     documentId,
     brandTag: doc.brandTag,
@@ -54,6 +55,7 @@ export async function processIngestJob(documentId: string) {
           ? doc.content
           : null,
     });
+    extractor = extracted.extractor;
     await setDocumentStatus(documentId, "extracting", {
       rawText: extracted.rawText,
       type: extracted.type,
@@ -61,6 +63,7 @@ export async function processIngestJob(documentId: string) {
     memoryLog("L2", "extract done", {
       documentId,
       type: extracted.type,
+      extractor: extracted.extractor,
       chars: extracted.rawText.length,
       ms: Date.now() - started,
     });
@@ -117,11 +120,13 @@ export async function processIngestJob(documentId: string) {
         duration: Date.now() - started,
         finalStatus: "done",
         chunkCount: chunkRows.length,
+        extractor: extracted.extractor,
       },
     });
     memoryLog("L5", "index done — document ready", {
       documentId,
       chunkCount: chunkRows.length,
+      extractor: extracted.extractor,
       ms: Date.now() - started,
     });
 
@@ -179,6 +184,7 @@ export async function processIngestJob(documentId: string) {
         duration: Date.now() - started,
         finalStatus: "failed",
         error: message,
+        ...(extractor ? { extractor } : {}),
       },
     });
     throw err;

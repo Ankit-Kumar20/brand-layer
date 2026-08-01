@@ -105,6 +105,15 @@ async function extractPdfText(input: {
   return rawText;
 }
 
+export type Extractor =
+  | "firecrawl"
+  | "fetch"
+  | "content"
+  | "pdf"
+  | "json"
+  | "svg_asset"
+  | "markdown";
+
 export async function extractDocument(input: {
   content?: string | null;
   url?: string | null;
@@ -112,14 +121,14 @@ export async function extractDocument(input: {
   kind?: string | null;
   metadata?: Record<string, string | number | boolean> | null;
   pdfBase64?: string | null;
-}): Promise<{ rawText: string; type: string }> {
+}): Promise<{ rawText: string; type: string; extractor: Extractor }> {
   const kind = input.kind ?? input.type;
 
   if (kind === "pdf" || input.type === "pdf" || input.pdfBase64) {
     memoryLog("L2", "extract pdf", {});
     const rawText = await extractPdfText(input);
     memoryLog("L2", "extract pdf done", { chars: rawText.length });
-    return { rawText, type: "pdf" };
+    return { rawText, type: "pdf", extractor: "pdf" };
   }
 
   if (kind === "json" || input.type === "json") {
@@ -129,7 +138,7 @@ export async function extractDocument(input: {
     });
     try {
       const rawText = normalizeJsonContent(input.content.trim());
-      return { rawText, type: "json" };
+      return { rawText, type: "json", extractor: "json" };
     } catch {
       throw new Error("Invalid JSON content");
     }
@@ -142,21 +151,25 @@ export async function extractDocument(input: {
       metadata: input.metadata,
     });
     if (!rawText.trim()) throw new Error("SVG asset produced empty card");
-    return { rawText, type: "svg_asset" };
+    return { rawText, type: "svg_asset", extractor: "svg_asset" };
   }
 
   if (kind === "markdown" || input.type === "markdown") {
     if (!input.content?.trim()) throw new Error("Markdown requires content");
     const rawText = input.content.trim().replace(/\r\n/g, "\n");
     memoryLog("L2", "extract markdown", { chars: rawText.length });
-    return { rawText, type: "markdown" };
+    return { rawText, type: "markdown", extractor: "markdown" };
   }
 
   if (input.content?.trim()) {
     memoryLog("L2", "extract from content", {
       chars: input.content.trim().length,
     });
-    return { rawText: input.content.trim(), type: input.type ?? "text" };
+    return {
+      rawText: input.content.trim(),
+      type: input.type ?? "text",
+      extractor: "content",
+    };
   }
 
   if (input.url) {
@@ -164,8 +177,16 @@ export async function extractDocument(input: {
     try {
       const markdown = await scrapeUrlWithFirecrawl(input.url);
       if (markdown) {
-        return { rawText: markdown, type: "webpage" };
+        memoryLog("L2", "extract via firecrawl", {
+          url: input.url,
+          chars: markdown.length,
+        });
+        return { rawText: markdown, type: "webpage", extractor: "firecrawl" };
       }
+      memoryLog("L2", "firecrawl skipped — using fetch", {
+        url: input.url,
+        reason: "no_api_key",
+      });
     } catch (err) {
       memoryWarn("L2", "firecrawl failed — falling back to fetch", {
         url: input.url,
@@ -191,20 +212,34 @@ export async function extractDocument(input: {
       contentType.includes("text/plain") ||
       contentType.includes("text/markdown")
     ) {
-      memoryLog("L2", "extract url text", { chars: body.trim().length });
-      return { rawText: body.trim(), type: "text" };
+      memoryLog("L2", "extract url text", {
+        chars: body.trim().length,
+        extractor: "fetch",
+      });
+      return { rawText: body.trim(), type: "text", extractor: "fetch" };
     }
     if (contentType.includes("application/json")) {
       try {
         const rawText = normalizeJsonContent(body);
-        return { rawText, type: "json" };
+        memoryLog("L2", "extract url json via fetch", {
+          chars: rawText.length,
+          extractor: "fetch",
+        });
+        return { rawText, type: "json", extractor: "fetch" };
       } catch {
-        return { rawText: body.trim(), type: "text" };
+        memoryLog("L2", "extract url text via fetch", {
+          chars: body.trim().length,
+          extractor: "fetch",
+        });
+        return { rawText: body.trim(), type: "text", extractor: "fetch" };
       }
     }
     const rawText = htmlToText(body);
-    memoryLog("L2", "extract url html→text", { chars: rawText.length });
-    return { rawText, type: "webpage" };
+    memoryLog("L2", "extract url html→text", {
+      chars: rawText.length,
+      extractor: "fetch",
+    });
+    return { rawText, type: "webpage", extractor: "fetch" };
   }
 
   throw new Error("No content or url to extract");
