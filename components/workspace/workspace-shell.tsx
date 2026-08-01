@@ -600,22 +600,6 @@ function MenuRow({
           {meta}
         </span>
       ) : null}
-      {active ? (
-        <svg
-          aria-hidden
-          className="size-3.5 shrink-0 text-foreground"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-          viewBox="0 0 16 16"
-        >
-          <path d="m3.5 8.5 3 3 6-7" />
-        </svg>
-      ) : (
-        <span className="size-3.5 shrink-0" />
-      )}
     </button>
   );
 }
