@@ -44,6 +44,14 @@ export const BrandKitFromUrlSchema = z.object({
   name: z.string().min(1).optional(),
 });
 
+export const BrandKitGenerateSchema = z.object({
+  prompt: z.string().trim().min(1).max(2000),
+  size: z
+    .enum(["1024x1024", "1536x1024", "1024x1536"])
+    .optional()
+    .default("1024x1024"),
+});
+
 export type BrandKitColor = z.infer<typeof BrandKitColorSchema>;
 export type BrandKitIdentity = z.infer<typeof BrandKitIdentitySchema>;
 export type BrandKitDesignLanguage = z.infer<
@@ -51,6 +59,7 @@ export type BrandKitDesignLanguage = z.infer<
 >;
 export type BrandKitPatchInput = z.infer<typeof BrandKitPatchSchema>;
 export type BrandKitFromUrlInput = z.infer<typeof BrandKitFromUrlSchema>;
+export type BrandKitGenerateInput = z.infer<typeof BrandKitGenerateSchema>;
 
 export type BrandKitRecord = {
   id: string;

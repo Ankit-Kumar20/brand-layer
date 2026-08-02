@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { ArrowRight, CircleNotch, Plus, X } from "@phosphor-icons/react";
+import {
+  ArrowRight,
+  CircleNotch,
+  DownloadSimple,
+  Plus,
+  X,
+} from "@phosphor-icons/react";
 
 import { AuthModal } from "@/components/auth/auth-modal";
 import { SectionRule } from "@/components/landing/section-rule";
@@ -146,6 +152,12 @@ export function BrandKitApp({ signedIn }: BrandKitAppProps) {
   const [notice, setNotice] = useState<string | null>(null);
   const [toneDraft, setToneDraft] = useState("");
   const [colorDraft, setColorDraft] = useState("#");
+  const [genPrompt, setGenPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [genImageSrc, setGenImageSrc] = useState<string | null>(null);
+  const [genPromptUsed, setGenPromptUsed] = useState<string | null>(null);
+  const [genLogoAttached, setGenLogoAttached] = useState(false);
+  const [showPromptUsed, setShowPromptUsed] = useState(false);
 
   const normalized = normalizeWebsiteUrl(url);
   const previewHost = normalized
@@ -231,8 +243,18 @@ export function BrandKitApp({ signedIn }: BrandKitAppProps) {
       setKit(null);
       setIdentity(emptyIdentity());
       setDesign(emptyDesign());
+      setGenPrompt("");
+      setGenImageSrc(null);
+      setGenPromptUsed(null);
+      setGenLogoAttached(false);
+      setShowPromptUsed(false);
       return;
     }
+    setGenPrompt("");
+    setGenImageSrc(null);
+    setGenPromptUsed(null);
+    setGenLogoAttached(false);
+    setShowPromptUsed(false);
     void loadKit(selectedBrandId);
   }, [selectedBrandId, loadKit]);
 
@@ -281,6 +303,64 @@ export function BrandKitApp({ signedIn }: BrandKitAppProps) {
       setError(err instanceof Error ? err.message : "Import failed");
     } finally {
       setImporting(false);
+    }
+  }
+
+  async function handleGenerate() {
+    if (!selectedBrandId || !kit || generating) return;
+    const prompt = genPrompt.trim();
+    if (!prompt) {
+      setError("Enter a prompt to generate an image.");
+      return;
+    }
+
+    setGenerating(true);
+    setError(null);
+    setNotice(null);
+    setGenImageSrc(null);
+    setGenPromptUsed(null);
+    setGenLogoAttached(false);
+
+    try {
+      const res = await fetch(
+        `/api/v1/brand-kit/${selectedBrandId}/generate`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ prompt }),
+        },
+      );
+      const data = (await res.json()) as {
+        imageBase64?: string;
+        mimeType?: string;
+        promptUsed?: string;
+        logoAttached?: boolean;
+        error?: string;
+        detail?: string;
+      };
+
+      if (!res.ok || !data.imageBase64) {
+        setError(data.detail || data.error || `HTTP ${res.status}`);
+        return;
+      }
+
+      const mime = data.mimeType ?? "image/png";
+      setGenImageSrc(`data:${mime};base64,${data.imageBase64}`);
+      setGenPromptUsed(data.promptUsed ?? null);
+      setGenLogoAttached(Boolean(data.logoAttached));
+      setNotice(
+        data.logoAttached
+          ? "Image generated with logo attached as reference. Not saved — download if you want to keep it."
+          : "Image generated. Not saved — download if you want to keep it.",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Generation failed");
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -509,6 +589,7 @@ export function BrandKitApp({ signedIn }: BrandKitAppProps) {
           ) : null}
 
           {kit && !loadingKit ? (
+            <>
             <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
               <div className="flex flex-col gap-8">
                 <div className="flex flex-col gap-2">
@@ -793,6 +874,98 @@ export function BrandKitApp({ signedIn }: BrandKitAppProps) {
                 </div>
               </div>
             </div>
+
+            <div className="flex flex-col gap-8">
+              <div className="flex flex-col gap-2">
+                <p className="text-label text-primary">Generate</p>
+                <h2 className="text-prose text-foreground">
+                  Create with this brand
+                </h2>
+                <p className="text-body text-muted-foreground">
+                  Uses the saved kit for {identity.name || "this brand"} — colors,
+                  tone, aesthetic, and logo
+                  {identity.logoUrl
+                    ? " (downloaded and attached when generating)"
+                    : ""}
+                  . Images are not stored.
+                </p>
+              </div>
+
+              <label className="flex flex-col gap-2">
+                <span className="text-label text-muted-foreground">Prompt</span>
+                <textarea
+                  className="min-h-28 w-full resize-none border-0 border-b border-border bg-transparent py-2 text-body text-foreground outline-none transition-colors duration-300 ease-[var(--ease-swift)] placeholder:text-muted-foreground/50 focus:border-primary"
+                  disabled={generating}
+                  onChange={(e) => setGenPrompt(e.target.value)}
+                  placeholder="e.g. Hero illustration of a product launch on a dark background"
+                  rows={4}
+                  value={genPrompt}
+                />
+              </label>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  className="h-11 px-6 font-medium"
+                  disabled={generating || !genPrompt.trim()}
+                  onClick={() => void handleGenerate()}
+                  type="button"
+                >
+                  {generating ? (
+                    <>
+                      <CircleNotch className="size-4 animate-spin" />
+                      Generating
+                    </>
+                  ) : (
+                    "Generate image"
+                  )}
+                </Button>
+                {dirty ? (
+                  <p className="text-label text-muted-foreground">
+                    Unsaved kit edits are not included — save first.
+                  </p>
+                ) : null}
+              </div>
+
+              {genImageSrc ? (
+                <div className="flex flex-col gap-4">
+                  <img
+                    alt="Generated brand image"
+                    className="max-h-[32rem] w-full max-w-xl object-contain"
+                    src={genImageSrc}
+                  />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <a
+                      className="inline-flex h-9 items-center gap-2 rounded bg-background-100 px-3 text-sm text-foreground transition-colors duration-300 ease-[var(--ease-swift)] hover:bg-background-300"
+                      download={`${identity.name || "brand"}-generate.png`}
+                      href={genImageSrc}
+                    >
+                      <DownloadSimple className="size-4" />
+                      Download
+                    </a>
+                    {genLogoAttached ? (
+                      <span className="text-label text-muted-foreground">
+                        Logo attached as reference
+                      </span>
+                    ) : null}
+                    {genPromptUsed ? (
+                      <button
+                        className="text-label text-primary transition-colors duration-300 ease-[var(--ease-swift)] hover:text-primary/80"
+                        onClick={() => setShowPromptUsed((v) => !v)}
+                        type="button"
+                      >
+                        {showPromptUsed ? "Hide prompt used" : "Show prompt used"}
+                      </button>
+                    ) : null}
+                  </div>
+                  {showPromptUsed && genPromptUsed ? (
+                    <pre className="max-h-48 overflow-auto whitespace-pre-wrap font-mono text-xs text-muted-foreground">
+                      {genPromptUsed}
+                    </pre>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </>
           ) : null}
         </div>
         <SectionRule className="bottom-0" />
