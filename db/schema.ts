@@ -190,6 +190,55 @@ export const brands = pgTable(
 );
 
 /**
+ * Editable Trybloom-style brand kit (identity + design language).
+ * Separate from memory `profiles` — this is the generative default context.
+ * Schema added in code; run `bun run db:generate` then migrate when ready.
+ */
+export const brandKits = pgTable(
+  "brand_kits",
+  {
+    id: text("id").primaryKey(),
+    brandId: text("brand_id")
+      .notNull()
+      .references(() => brands.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    brandTag: text("brand_tag").notNull(),
+    sourceUrl: text("source_url"),
+    status: text("status").notNull().default("ready"),
+    identity: jsonb("identity")
+      .$type<{
+        name: string;
+        domain?: string;
+        logoUrl?: string;
+        description?: string;
+        tagline?: string;
+      }>()
+      .notNull(),
+    designLanguage: jsonb("design_language")
+      .$type<{
+        colors: Array<{ hex: string; role?: string }>;
+        fonts: { heading?: string; body?: string };
+        tone: string[];
+        aesthetic?: string;
+      }>()
+      .notNull(),
+    rawFirecrawl: jsonb("raw_firecrawl").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("brand_kits_brand_id_uidx").on(table.brandId),
+    index("brand_kits_user_idx").on(table.userId),
+    index("brand_kits_user_brand_tag_idx").on(table.userId, table.brandTag),
+  ],
+);
+
+/**
  * Brand chosen during MCP OAuth consent (ChatGPT / Claude connectors).
  * Keyed by user + OAuth client so reconnects keep the same brand.
  */
@@ -434,6 +483,7 @@ export const userRelations = relations(user, ({ many }) => ({
   documents: many(documents),
   memories: many(memories),
   brands: many(brands),
+  brandKits: many(brandKits),
   oauthApplications: many(oauthApplication),
   oauthAccessTokens: many(oauthAccessToken),
   oauthConsents: many(oauthConsent),
@@ -509,6 +559,18 @@ export const brandsRelations = relations(brands, ({ one, many }) => ({
   }),
   apiKeys: many(apiKeys),
   mcpOauthBrands: many(mcpOauthBrand),
+  brandKit: one(brandKits),
+}));
+
+export const brandKitsRelations = relations(brandKits, ({ one }) => ({
+  brand: one(brands, {
+    fields: [brandKits.brandId],
+    references: [brands.id],
+  }),
+  user: one(user, {
+    fields: [brandKits.userId],
+    references: [user.id],
+  }),
 }));
 
 export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
