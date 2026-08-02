@@ -53,8 +53,74 @@ type BrandKitAppProps = {
 const fieldClassName =
   "w-full border-0 border-b border-border bg-transparent py-2.5 text-body text-foreground outline-none transition-colors duration-300 ease-[var(--ease-swift)] placeholder:text-muted-foreground/50 focus:border-primary";
 
-const areaClassName =
-  "w-full resize-y border border-border bg-background-50 px-3 py-2.5 text-body text-foreground outline-none transition-colors duration-300 ease-[var(--ease-swift)] placeholder:text-muted-foreground/50 focus:border-primary";
+/** Truncated prose with Show more; edit via flat (non-resizable) field. */
+function ClampedProseField({
+  label,
+  value,
+  placeholder,
+  onChange,
+  clampLines = 3,
+}: {
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (next: string) => void;
+  clampLines?: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const text = value.trim();
+  const needsClamp = text.length > 160 || text.split(/\n/).length > clampLines;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-label text-muted-foreground">{label}</span>
+        <button
+          className="text-label text-primary transition-colors duration-300 ease-[var(--ease-swift)] hover:text-primary/80"
+          onClick={() => setEditing((v) => !v)}
+          type="button"
+        >
+          {editing ? "Done" : "Edit"}
+        </button>
+      </div>
+
+      {editing ? (
+        <textarea
+          className="min-h-24 w-full resize-none border-0 border-b border-border bg-transparent py-2 text-body text-foreground outline-none transition-colors duration-300 ease-[var(--ease-swift)] placeholder:text-muted-foreground/50 focus:border-primary"
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={4}
+          value={value}
+        />
+      ) : text ? (
+        <div className="flex flex-col gap-2">
+          <p
+            className={cn(
+              "text-body text-pretty text-foreground",
+              !expanded && needsClamp && "line-clamp-3",
+            )}
+          >
+            {text}
+          </p>
+          {needsClamp ? (
+            <button
+              className="self-start text-label text-primary transition-colors duration-300 ease-[var(--ease-swift)] hover:text-primary/80"
+              onClick={() => setExpanded((v) => !v)}
+              type="button"
+            >
+              {expanded ? "Show less" : "Show more"}
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <p className="text-body text-muted-foreground/60">
+          {placeholder ?? "Empty"}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function emptyIdentity(): KitIdentity {
   return { name: "" };
@@ -512,22 +578,18 @@ export function BrandKitApp({ signedIn }: BrandKitAppProps) {
                     />
                   </label>
 
-                  <label className="flex flex-col gap-1">
-                    <span className="text-label text-muted-foreground">
-                      Description
-                    </span>
-                    <textarea
-                      className={cn(areaClassName, "min-h-28")}
-                      onChange={(e) => {
-                        setIdentity((i) => ({
-                          ...i,
-                          description: e.target.value || undefined,
-                        }));
-                        markDirty();
-                      }}
-                      value={identity.description ?? ""}
-                    />
-                  </label>
+                  <ClampedProseField
+                    label="Description"
+                    onChange={(next) => {
+                      setIdentity((i) => ({
+                        ...i,
+                        description: next || undefined,
+                      }));
+                      markDirty();
+                    }}
+                    placeholder="What the brand does"
+                    value={identity.description ?? ""}
+                  />
 
                   <label className="flex flex-col gap-1">
                     <span className="text-label text-muted-foreground">
@@ -710,22 +772,18 @@ export function BrandKitApp({ signedIn }: BrandKitAppProps) {
                     </div>
                   </div>
 
-                  <label className="flex flex-col gap-1">
-                    <span className="text-label text-muted-foreground">
-                      Aesthetic
-                    </span>
-                    <textarea
-                      className={cn(areaClassName, "min-h-28")}
-                      onChange={(e) => {
-                        setDesign((d) => ({
-                          ...d,
-                          aesthetic: e.target.value || undefined,
-                        }));
-                        markDirty();
-                      }}
-                      value={design.aesthetic ?? ""}
-                    />
-                  </label>
+                  <ClampedProseField
+                    label="Aesthetic"
+                    onChange={(next) => {
+                      setDesign((d) => ({
+                        ...d,
+                        aesthetic: next || undefined,
+                      }));
+                      markDirty();
+                    }}
+                    placeholder="Visual style in a few sentences"
+                    value={design.aesthetic ?? ""}
+                  />
 
                   {kit.sourceUrl ? (
                     <p className="font-mono text-xs text-muted-foreground">
